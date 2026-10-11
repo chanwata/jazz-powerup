@@ -1,4 +1,7 @@
 import {lessons,earDrills} from './data.js';
+import {practiceA} from './practice-a.js';
+import {practiceB} from './practice-b.js';
+const practicePlans={...practiceA,...practiceB};
 import {readingA} from './reading-a.js';
 import {readingB} from './reading-b.js';
 const deepReading={...readingA,...readingB};
@@ -7,7 +10,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STORE='after-parker-v1';
 function load(){try{const p=JSON.parse(localStorage.getItem(STORE));if(p && typeof p==='object')return p}catch{}return {}};
-let state={completed:{},notes:{},ear:{},pianoMode:'app',startOctave:3,...load()};
+let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,...load()};
 const audio=new StudyAudio();
 let currentView='lesson';let currentId='01';let selectedEarId=earDrills[0].id;
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){console.warn('Storage unavailable',e)}}
@@ -25,6 +28,16 @@ function deeperSections(l){
 function deepListen(l){const d=deepReading[l.id];return d?`<div class="deep-listen"><h3>録音を3周するための聴取ガイド</h3><ol class="reading-map">${d.listenMap.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
 function deepLab(l){const d=deepReading[l.id];return d?`<div class="deep-lab"><h3>追加実験 — 自分の演奏で検証</h3><p>${esc(d.lab)}</p></div>`:''}
 function deepAside(l){const d=deepReading[l.id];return d?`<p class="deep-aside">${esc(d.aside)}</p>`:''}
+function prettyHits(src){return String(src||'').trim().split(/\s+/).filter(Boolean).map(t=>t.replace('@','  @').replace('/','  長さ')).join(' · ')}
+function practicePanel(l){
+ const p=practicePlans[l.id];if(!p)return '';
+ const speed=state.practiceSpeed||1;
+ const examples=p.examples.map((ex,j)=>`<article class="performance-example"><div class="performance-head"><span class="number-label">SOUND ${String(j+1).padStart(2,'0')} / ${ex.bars.length} blocks</span><h3>${esc(ex.title)}</h3><p>${esc(ex.hear)}</p></div><div class="score-sheet" aria-label="練習用オリジナル音列">${ex.bars.map((b,k)=>`<div class="score-bar"><div class="score-heading"><span>${String(k+1).padStart(2,'0')}</span><strong>${esc(b.h)}</strong><span>${esc(b.beats||4)}拍</span></div><p><b>低音</b>${esc(prettyHits(b.b))}</p>${b.p?`<p><b>鍵盤</b>${esc(b.p)}</p>`:''}${b.lead?`<p><b>上声</b>${esc(prettyHits(b.lead))}</p>`:''}</div>`).join('')}</div><div class="performance-actions"><button class="play-button" data-play-practice="${l.id}:${j}" data-repeat="1">▶ 再生</button><button class="plain-button" data-play-practice="${l.id}:${j}" data-repeat="2">↻ 2回聴く</button></div><p class="performance-reason"><b>どう聴く？</b> ${esc(ex.why)}</p></article>`).join('');
+ const exercises=p.tasks.map((t,j)=>{const key=l.id+':'+j,done=!!state.practiceDone?.[key];return `<article class="practice-task"><div class="task-row"><div><span class="number-label">PRACTICE ${j+1}/3</span><h3>${esc(t.level)}</h3></div><button type="button" class="task-check ${done?'done':''}" aria-pressed="${done}" data-practice-done="${key}">${done?'✓ 練習済み':'○ チェック'}</button></div><dl><dt>準備</dt><dd>${esc(t.setup)}</dd><dt>演奏する</dt><dd>${esc(t.action)}</dd><dt>合格の目安</dt><dd>${esc(t.check)}</dd></dl></article>`}).join('');
+ const recordings=p.recordings.map(r=>`<article class="recording-case"><div><h3>${esc(r.title)}</h3><p><strong>原盤を聴く：</strong>${esc(r.focus)}</p><p><strong>自分の演奏へ：</strong>${esc(r.apply)}</p></div><a href="https://www.youtube.com/results?search_query=${encodeURIComponent(r.title)}" target="_blank" rel="noopener noreferrer">録音を探す ↗</a></article>`).join('');
+ const rubric=p.tasks.map(t=>`<li>${esc(t.check)}</li>`).join('');
+ return `<section class="prose-section practice-workshop" id="workshop"><div class="section-label">08 — PRACTICE WORKSHOP / 新しい実践教材</div><h2>聴いて、弾いて、変形する。</h2><p class="workshop-intro">${esc(p.goal)}</p><p class="micro">以下の音列は技法を聴くためのオリジナル教材例。歴史的な演奏の正確な採譜ではありません。@0は小節頭、@1は2拍目、@3.5は4拍裏、/数字は保持する拍数。_は休符。実際の録音は下のリンクから別途聴こう。</p><div class="speed-strip"><span class="smallcaps">TEMPO</span>${[0.75,1,1.25].map(v=>`<button type="button" class="speed-btn ${speed===v?'active':''}" data-practice-speed="${v}">${Math.round(v*100)}%</button>`).join('')}<span class="micro">再生速度は次に押す音源から適用</span></div><div class="workshop-examples">${examples}</div><div class="section-label">09 — 実機ベース・ピアノで練習する</div><h2>段階別に、演奏を育てる。</h2><div class="workshop-tasks">${exercises}</div><div class="section-label">10 — 実際の録音で答え合わせ</div><h2>教科書の音を、歴史の演奏へ戻す。</h2><p class="micro">リンクは録音を探すためのYouTube検索。原盤の演奏者・年代・版を確認して使ってください。検索結果をそのまま正規の原盤とは見なしません。</p><div class="recording-cases">${recordings}</div><div class="workshop-rubric"><strong>今日の自己チェック</strong><ul>${rubric}</ul></div></section>`;
+}
 function tags(l){return `<span class="chip">${esc(l.era)}</span><span class="chip">${esc(l.tag)}</span><span class="chip subtle">${esc(l.minutes)} min</span>`}
 function renderMenu(){
  const q=$('lesson-search').value.trim().toLocaleLowerCase();
@@ -46,9 +59,10 @@ function renderLesson(){
  <section class="prose-section listen-section"><div class="section-label">06 — この録音を聴く</div><h2>${esc(l.album)}</h2><p class="artist">${esc(l.artist)}</p>${l.videoId?`<div class="verified-video"><button class="recording-link" data-embed-video="${l.videoId}" aria-label="${esc(l.album)} の公式YouTube録音をページ内で再生">▷ このページで公式録音を再生</button><div id="embedded-video" class="embedded-video"></div></div>`:""}<a class="recording-alt" href="${esc(urlFor(l))}" target="_blank" rel="noopener noreferrer">YouTubeで対象録音を探す ↗</a><p class="micro">${l.videoId?"確認済みの公式アーティストチャンネルの音源を使用。埋め込みが制限される場合は外部検索から。":"対象録音に対応した検索結果を新しいタブで開きます。権利者の音源が見つかった場合はそちらで聴いてください。"}</p><ol class="listening-points">${toHtmlList(l.listen)}</ol>${deepListen(l)}</section>
  <section class="prose-section sound-section"><div class="section-label">07 — 音で確かめる</div><h2>音符を読まずに、まず聴く。</h2><p class="micro">音はアプリ内のピアノ風シンセが生成する教材用モデルで、原曲の録音や採譜の再現ではありません。音量を小さめにして開始。</p><div class="mode-switch"><button data-mode="app" class="mode-btn ${state.pianoMode==='app'?'active':''}">アプリで鳴らす</button><button data-mode="real" class="mode-btn ${state.pianoMode==='real'?'active':''}">手元のピアノで試す</button></div><p id="piano-hint" class="hint">${state.pianoMode==='real'?'各音名を見ながら実機で再現。再生ボタンでも参考音を確認できます。':'再生ボタンから発音。聴き比べたら手元の楽器で再現してみて。'}</p>${ex}<button class="stop-button" data-stop>■ 停止</button></section>
  <section class="prose-section"><div class="section-label">08 — ベースで試す</div><div class="practice-box"><span class="smallcaps">PLAYING ASSIGNMENT</span><p>${esc(l.practice)}</p>${deepLab(l)}</div></section>
- <section class="prose-section"><div class="section-label">09 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p>${deepAside(l)}</section>
- <section class="prose-section"><div class="section-label">10 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
- <section class="prose-section"><div class="section-label">11 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">自動保存（この端末内）。ほかの端末への同期はありません。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
+ ${practicePanel(l)}
+ <section class="prose-section"><div class="section-label">11 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p>${deepAside(l)}</section>
+ <section class="prose-section"><div class="section-label">12 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
+ <section class="prose-section"><div class="section-label">13 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">自動保存（この端末内）。ほかの端末への同期はありません。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
  <div class="next-row">${prev?`<a href="#/lesson/${prev.id}">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a href="#/lesson/${next.id}">${esc(next.title)} →</a>`:'<a href="#/ear">耳トレに進む →</a>'}</div>
  </div><aside class="context-panel"><div class="context-card"><span class="overline">IN THIS SESSION</span><h3>今日の聴き方</h3><p>まず録音を聴く。次に短い教材音を再生。最後にベースかピアノで「音が違って聴こえる理由」を検証する。</p><div class="divider"></div><strong>基準は知識でなく耳</strong><p>理論上は同じスケールでも、下に置く音や発音タイミングで印象が変わる。</p></div><div class="context-card"><span class="overline">SOURCE NOTES</span><div class="source-list">${sources}</div><p class="micro">録音年・音楽家・制作情報は一次情報との照合を推奨。参考リンクは各権利者・組織の公開資料。</p></div></aside></div>`;
  const prior=state['quiz-'+l.id];if(prior!==undefined)markQuiz(l,prior);
@@ -105,6 +119,9 @@ window.addEventListener('hashchange',route);
 document.addEventListener('click',e=>{
  const nav=e.target.closest('[data-view]');if(nav){location.hash=`/${nav.dataset.view}`;return}
  const video=e.target.closest('[data-embed-video]');if(video){const id=video.dataset.embedVideo;if(!/^[\w-]{11}$/.test(id))return;const target=$('embedded-video');if(target){target.innerHTML=`<iframe title="公式アーティストのYouTube音源" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube-nocookie.com/embed/${id}?rel=0"></iframe>`;video.textContent='▶ プレーヤーを開きました';video.disabled=true}return}
+ const ps=e.target.closest('[data-practice-speed]');if(ps){state.practiceSpeed=Number(ps.dataset.practiceSpeed);save();document.querySelectorAll('[data-practice-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.practiceSpeed)===state.practiceSpeed));return}
+ const pp=e.target.closest('[data-play-practice]');if(pp){const [id,index]=pp.dataset.playPractice.split(':');const sample=practicePlans[id]?.examples[Number(index)];if(sample)safePlay(()=>audio.playPattern(sample,state.practiceSpeed||1,Number(pp.dataset.repeat)||1));return}
+ const pd=e.target.closest('[data-practice-done]');if(pd){const key=pd.dataset.practiceDone;state.practiceDone ||= {};state.practiceDone[key]=!state.practiceDone[key];pd.textContent=state.practiceDone[key]?'✓ 練習済み':'○ チェック';pd.setAttribute('aria-pressed',String(!!state.practiceDone[key]));pd.classList.toggle('done',!!state.practiceDone[key]);save();return}
  const stop=e.target.closest('[data-stop]');if(stop){audio.stop();toast('停止しました');return}
  const play=e.target.closest('[data-play]');if(play){const [id,index]=play.dataset.play.split(':');const l=lessons.find(l=>l.id===id);if(l?.examples[Number(index)])safePlay(()=>audio.playSequence(l.examples[Number(index)]));return}
  const mode=e.target.closest('[data-mode]');if(mode){state.pianoMode=mode.dataset.mode;save();renderLesson();return}
@@ -118,14 +135,14 @@ document.addEventListener('click',e=>{
  const pb=e.target.closest('[data-preset-bass]');if(pb){safePlay(()=>audio.playChord({bass:pb.dataset.presetBass,notes:['E3','A3','D4','G4','B4']}));return}
  const p11=e.target.closest('[data-preset-11]');if(p11){safePlay(()=>audio.playChord({bass:'F2',notes:['A3','E4',p11.dataset.preset11,'D4']}));return}
  const exportBtn=e.target.closest('[data-export]');if(exportBtn){const blob=new Blob([JSON.stringify({format:'after-parker-v1',savedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='after-parker-progress.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('JSONを書き出しました');return}
- const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},pianoMode:'app',startOctave:3};save();route();toast('端末内の学習履歴をリセットしました')}return}
+ const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3};save();route();toast('端末内の学習履歴をリセットしました')}return}
 });
 document.addEventListener('change',async e=>{
  if(e.target.id==='octave-selector'){state.startOctave=Number(e.target.value);save();renderKeyboard();return}
  if(e.target.id==='import-progress'){
    try{const f=e.target.files?.[0];if(!f)return;if(f.size>1024*1024)throw new Error('ファイルが大きすぎます');const data=JSON.parse(await f.text());if(data.format!=='after-parker-v1'||typeof data.data!=='object'||data.data===null)throw new Error('未対応のJSON形式');
      const p=data.data;const ids=new Set(lessons.map(l=>l.id));const ears=new Set(earDrills.map(d=>d.id));
-     state={completed:Object.fromEntries(Object.entries(p.completed||{}).filter(([k,v])=>ids.has(k)&&typeof v==='boolean')),notes:Object.fromEntries(Object.entries(p.notes||{}).filter(([k,v])=>ids.has(k)&&typeof v==='string').map(([k,v])=>[k,v.slice(0,50000)])),ear:Object.fromEntries(Object.entries(p.ear||{}).filter(([k,v])=>ears.has(k)&&['A','B'].includes(v))),pianoMode:['app','real'].includes(p.pianoMode)?p.pianoMode:'app',startOctave:[2,3,4].includes(p.startOctave)?p.startOctave:3};
+     state={completed:Object.fromEntries(Object.entries(p.completed||{}).filter(([k,v])=>ids.has(k)&&typeof v==='boolean')),notes:Object.fromEntries(Object.entries(p.notes||{}).filter(([k,v])=>ids.has(k)&&typeof v==='string').map(([k,v])=>[k,v.slice(0,50000)])),ear:Object.fromEntries(Object.entries(p.ear||{}).filter(([k,v])=>ears.has(k)&&['A','B'].includes(v))),pianoMode:['app','real'].includes(p.pianoMode)?p.pianoMode:'app',startOctave:[2,3,4].includes(p.startOctave)?p.startOctave:3,practiceSpeed:[.75,1,1.25].includes(p.practiceSpeed)?p.practiceSpeed:1,practiceDone:Object.fromEntries(Object.entries(p.practiceDone||{}).filter(([k,v])=>/^\\d{2}:[012]$/.test(k)&&practicePlans[k.slice(0,2)]&&typeof v==='boolean'))};
      for(const l of lessons){if([0,1,2].includes(p['quiz-'+l.id]))state['quiz-'+l.id]=p['quiz-'+l.id]}
      save();route();toast('復元できました');
    }catch(err){toast('復元できません：'+err.message)}
