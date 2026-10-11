@@ -24,7 +24,7 @@ export function learningSignals(id,state,lesson){
  const rating=state?.reflections?.[id];
  const choice=state?.['quiz-'+id];
  const quizWrong=Number.isInteger(choice)&&choice!==lesson?.quiz?.answer;
- const uncertain=rating==='uncertain'||(rating!=='clear'&&difficulty.test(note))||quizWrong;
+ const uncertain=rating==='uncertain'||(!['clear','applied'].includes(rating)&&(difficulty.test(note)||quizWrong));
  const practiced=rating==='applied'||[0,1,2].some(i=>state?.practiceDone?.[id+':'+i]===true);
  const confident=rating==='clear'||(rating!=='uncertain'&&growth.test(note));
  const topics=TOPICS.filter(([name,re])=>re.test(note)).map(([name])=>name);

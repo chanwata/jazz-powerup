@@ -17,7 +17,7 @@ test('personalized explanations exist for all chapters and react to the learning
  assert.equal(a.signals.stage,'stretch');
  assert.match(a.nextAction,/3小節/);
  state['quiz-01']=1;
- assert.equal(adaptiveLesson('01',state,lesson('01')).signals.stage,'rebuild');
+ assert.equal(adaptiveLesson('01',state,lesson('01')).signals.stage,'stretch');
  state['quiz-01']=0;
  const markup=renderAdaptiveLesson(lesson('01'),{...state,mentorFeedback:{'01':{title:'直したい点',explanation:'<script>alert(1)</script>'}}},x=>String(x).replaceAll('<','&lt;').replaceAll('>','&gt;'));
  assert.match(markup,/個別解説/);assert.match(markup,/&lt;script&gt;/);assert.doesNotMatch(markup,/<script>/);
