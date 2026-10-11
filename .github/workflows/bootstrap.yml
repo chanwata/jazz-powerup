@@ -40,6 +40,14 @@ jobs:
             python3 scripts/install-score-edition.py
             rm .score-edition.part0 .score-edition.part1 .score-edition.part2 .score-edition.part3 .score-edition.tar.xz
           fi
+      - name: Install learning-memory edition if staged
+        shell: bash
+        run: |
+          if test -f .learning-update.tar.gz; then
+            echo 'f1aa832a22b62b20c955206d04929cf44291243fbd2043542c34c94b9b56b14e  .learning-update.tar.gz' | sha256sum -c -
+            python3 -c 'import tarfile; expected=set("src/app.js src/dashboard-view.js src/learning-model.js src/github-learning.js src/journal-ui.js src/journal.css index.html README.md docs/learning-memory.md tests/learning.test.js tests/app-smoke.test.js".split()); t=tarfile.open(".learning-update.tar.gz"); members=t.getmembers(); assert len(members)==len(expected) and {m.name for m in members}==expected and all(m.isfile() for m in members), "unexpected learning archive"; t.extractall(".",filter="data"); t.close()'
+            rm .learning-update.tar.gz
+          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
