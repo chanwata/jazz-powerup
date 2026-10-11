@@ -178,7 +178,7 @@ export const lessons = [
 ];
 
 export const earDrills = [
- {id:'e1',level:1,title:'同じ上声、低音だけ変更',question:'より明確にメジャー7thとして聴こえるのは？',a:{bass:'D2',notes:['E3','A3','D4','G4','B4']},b:{bass:'C2',notes:['E3','A3','D4','G4','B4']},correct:'B',explanation:'CをベースにするとEが長3度、Bが長7度。Dでは長短3度が不在。',piano:'右手 E–A–D–G–B、左手 D→C。'},
+ {id:'e1',level:1,title:'同じ上声、低音だけ変更',question:'より明確にメジャー7thとして聴こえるのは？',a:{bass:'D2',notes:['E3','A3','D4','G4','B4']},b:{bass:'C2',notes:['E3','A3','D4','G4','B4']},correct:'B',explanation:'CをベースにするとEが長3度、Bが長7度。Dでは長短3度が不在。',piano:'低音D→Cはアプリ。左手E3–A3、右手D4–G4–B4。'},
  {id:'e2',level:1,title:'Lydianの#11',question:'Fリディアンの#11を含むのは？',a:{bass:'F2',notes:['A3','E4','Bb4','D4']},b:{bass:'F2',notes:['A3','E4','B4','D4']},correct:'B',explanation:'Fに対してBが#11。B♭が自然11でAとの半音摩擦が生じる。',piano:'左手 F、右手 A E にB♭／Bを順に足す。'},
  {id:'e3',level:1,title:'長7度と短7度',question:'ドミナント7thはどちら？',a:{bass:'G2',notes:['B3','D4','F4']},b:{bass:'G2',notes:['B3','D4','F#4']},correct:'A',explanation:'G7の短7度はF。F#はGmaj7の長7度。',piano:'G+B+D+F と G+B+D+F#を弾き分ける。'},
  {id:'e4',level:2,title:'sus解決',question:'sus4が3度へ「解決」しているのはどちら？',a:{sequence:[{bass:'D2',notes:['G3','A3','C4'],beats:3},{bass:'D2',notes:['F#3','A3','C4'],beats:3}]},b:{sequence:[{bass:'D2',notes:['F#3','A3','C4'],beats:3},{bass:'D2',notes:['G3','A3','C4'],beats:3}]},correct:'A',explanation:'D7sus4のGがF#へ下がることで長3度が現れる。',piano:'D+C+Aを維持し、G→F#。'},

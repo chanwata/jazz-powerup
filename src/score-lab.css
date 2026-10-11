@@ -1,0 +1,22 @@
+.score-lab{margin:0 0 52px;border-top:3px solid var(--moss);padding-top:28px;max-width:100%;min-width:0}
+.sl-header h2{font-size:clamp(1.6rem,3.2vw,2.35rem);line-height:1.5;margin:18px 0 12px}
+.sl-header p,.sl-reading p,.sl-analysis p,.sl-practice li,.sl-caution p{font-size:.98rem;line-height:1.95;max-width:78ch}
+.sl-question{color:var(--moss);font-size:1.09rem!important;font-weight:750}
+.sl-reading{margin:30px 0}.sl-reading h3,.sl-analysis>h3,.sl-practice h3{font-size:1.25rem;margin:0 0 18px}.sl-reading p+p{margin-top:18px}
+.sl-hands{border-left:3px solid var(--ochre);background:#f8f0df;padding:18px 23px;margin:24px 0}.sl-hands p{margin:9px 0;line-height:1.9}.sl-small{font-size:.75rem!important;line-height:1.8!important;color:var(--muted)}
+.sl-reading-order{display:flex;gap:9px 21px;flex-wrap:wrap;font-size:.8rem;color:var(--ink2);margin:25px 0}
+.sl-cards{display:grid;gap:27px}.sl-card{min-width:0;border:1px solid var(--line);background:var(--cream);border-radius:4px;padding:21px}
+.sl-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}.sl-card-head h3{font-size:1.11rem;line-height:1.6;margin:0 0 8px}.sl-card-head>span{font-size:.77rem;color:var(--muted)}
+.sl-sheet{overflow-x:auto;overscroll-behavior-x:contain;margin:14px 0 8px;border:1px solid #e0e1dc;background:#fff;scrollbar-width:thin;max-width:100%}
+.sl-sheet svg{display:block;width:900px;max-width:none;height:auto}
+.sl-notation-note{font-size:.74rem;color:var(--muted);line-height:1.7;margin:7px 0 18px}
+.sl-controls{display:flex;gap:8px;flex-wrap:wrap}.sl-controls button{padding:12px 17px;min-height:44px;background:var(--moss);color:white;border:1px solid var(--moss);border-radius:3px;font-weight:720;font-size:.85rem}.sl-controls button:hover{background:var(--teal)}.sl-controls .sl-quiet{background:transparent;color:var(--moss)}
+.sl-options{display:flex;align-items:center;gap:12px 17px;flex-wrap:wrap;margin:15px 0 10px;font-size:.8rem}.sl-options select{padding:7px;background:white;color:var(--ink);border:1px solid var(--line);border-radius:3px;max-width:160px}.sl-options label{display:flex;gap:6px;align-items:center}.sl-link{border:0;background:none;color:var(--teal);padding:8px;font-size:.78rem;text-decoration:underline}.sl-status{font-size:.79rem;min-height:26px;color:var(--ink2);margin:10px 0}
+.sl-table-wrap{overflow-x:auto;max-width:100%;margin-top:17px}.sl-table-wrap table{border-collapse:collapse;width:100%;min-width:500px;font-size:.81rem;line-height:1.6}.sl-table-wrap caption{text-align:left;font-weight:750;padding:12px 0}.sl-table-wrap th{background:#e5ebe2;text-align:left;padding:9px 11px;white-space:nowrap}.sl-table-wrap td{border-bottom:1px solid var(--line);padding:9px 11px;vertical-align:top}.sl-table-wrap tr:nth-child(even){background:rgba(232,234,223,.3)}
+.sl-analysis{margin:35px 0}.sl-analysis article{border-left:2px solid var(--teal);padding:5px 0 7px 20px;margin:20px 0}.sl-analysis article>span{color:var(--ochre);font-size:.79rem;font-weight:750}.sl-analysis h4{font-size:1.05rem;margin:9px 0}.sl-analysis p{margin:7px 0}
+.sl-practice{background:#e9eee4;padding:23px;border:1px solid #d6dfd1;margin:30px 0}.sl-practice ol{padding-left:22px;margin:0}.sl-practice li{padding-left:5px;margin:15px 0}.sl-practice>p{line-height:1.9;margin:20px 0 0;border-top:1px solid #cad7c3;padding-top:17px}
+.sl-caution{padding:18px 23px;background:#f6efe3;border:1px solid #e4d7c2}.sl-caution p{margin:7px 0}.sl-source{font-size:.76rem;color:var(--muted);line-height:1.8;margin-top:18px}.sl-source a{color:var(--teal)}
+.sl-note:focus{outline:2px solid #b18c50}
+@media(max-width:760px){.score-lab{padding-top:19px}.sl-card{padding:14px}.sl-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.sl-controls button{padding:11px 8px}.sl-header p,.sl-reading p,.sl-analysis p,.sl-practice li,.sl-caution p{font-size:.95rem}.sl-hands,.sl-practice,.sl-caution{padding:17px}.sl-options{gap:11px;font-size:.75rem}.sl-options select{max-width:145px}.sl-sheet svg{width:780px}.sl-card-head h3{font-size:1rem}}
+@media print{.site-header,.side,.dash-side-column,.sl-controls,.sl-options,.sl-status{display:none!important}.main{padding:0!important;max-width:none}.shell{display:block}.sl-sheet{overflow:visible}.sl-sheet svg{width:100%;max-width:100%}.sl-card{break-inside:avoid;background:white}.sl-table-wrap{overflow:visible}}
+@media(max-width:760px){.side{align-self:stretch;min-width:0;max-width:100%;width:100%}.lesson-menu{min-width:0;width:100%;max-width:100%}.main{min-width:0}}
