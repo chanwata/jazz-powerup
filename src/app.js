@@ -1,4 +1,7 @@
 import {lessons,earDrills} from './data.js';
+import {readingA} from './reading-a.js';
+import {readingB} from './reading-b.js';
+const deepReading={...readingA,...readingB};
 import {StudyAudio,noteToMidi} from './audio.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -12,6 +15,16 @@ function progressUpdate(){const done=lessons.filter(l=>state.completed[l.id]).le
 function urlFor(l){return `https://www.youtube.com/results?search_query=${encodeURIComponent(l.query)}`;}
 function sections(title,body){return `<section class="prose-section"><div class="section-label">${title}</div><p>${esc(body)}</p></section>`}
 function toHtmlList(items){return items.map((t,i)=>`<li><span>${String(i+1).padStart(2,'0')}</span><p>${esc(t)}</p></li>`).join('')}
+function deepParagraphs(parts){return parts.map(s=>`<p>${esc(s)}</p>`).join('')}
+function deeperSections(l){
+ const d=deepReading[l.id];if(!d)return '';
+ return `<section class="prose-section deeper-section" id="section-deep-history"><div class="section-label">03 — 作品と歴史を深掘りする</div><h2>${esc(d.title)}</h2>${deepParagraphs(d.context)}</section>
+ <section class="prose-section deeper-section" id="section-deep-theory"><div class="section-label">04 — 音の働きを徹底分析</div><h2>耳で確認すべき構造</h2>${deepParagraphs(d.analysis)}</section>
+ <section class="prose-section deeper-section"><div class="section-label">05 — 人物と音楽のつながり</div><h2>誰が何を変えたのか</h2><ul class="musician-insights">${d.people.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section>`;
+}
+function deepListen(l){const d=deepReading[l.id];return d?`<div class="deep-listen"><h3>録音を3周するための聴取ガイド</h3><ol class="reading-map">${d.listenMap.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
+function deepLab(l){const d=deepReading[l.id];return d?`<div class="deep-lab"><h3>追加実験 — 自分の演奏で検証</h3><p>${esc(d.lab)}</p></div>`:''}
+function deepAside(l){const d=deepReading[l.id];return d?`<p class="deep-aside">${esc(d.aside)}</p>`:''}
 function tags(l){return `<span class="chip">${esc(l.era)}</span><span class="chip">${esc(l.tag)}</span><span class="chip subtle">${esc(l.minutes)} min</span>`}
 function renderMenu(){
  const q=$('lesson-search').value.trim().toLocaleLowerCase();
@@ -22,19 +35,20 @@ function renderLesson(){
  const l=lessons.find(x=>x.id===currentId)||lessons[0];currentId=l.id;
  const i=lessons.indexOf(l),prev=lessons[i-1],next=lessons[i+1];
  const ex=l.examples.map((e,j)=>`<div class="sound-example"><div class="sound-copy"><span class="number-label">STUDY ${String(j+1).padStart(2,'0')}</span><strong>${esc(e.label)}</strong><p>${esc(e.description)}</p>${state.pianoMode==='real'?`<p class="piano-notes">実機演奏：${esc(formatSpec(e))}</p>`:''}</div><button class="play-button" data-play="${l.id}:${j}"><span aria-hidden="true">▶</span> 音を鳴らす</button></div>`).join('');
- const sources=l.sources.map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)} ↗</a>`).join('');
+ const sources=[...l.sources,...(deepReading[l.id]?.refs||[])].map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)} ↗</a>`).join('');
  const checked=!!state.completed[l.id];
  $('app').innerHTML=`
  <div class="hero"><div class="hero-top"><span class="overline">LESSON ${l.id} / ${String(lessons.length).padStart(2,'0')} · ${esc(l.priority)}</span><div class="hero-chips">${tags(l)}</div></div><h1>${esc(l.title)}</h1><p class="hero-sub">${esc(l.subtitle)}</p><p class="hero-intro">${esc(l.premise)}</p></div>
  <div class="lesson-grid"><div class="article">
  ${sections('01 — 背景とジャズ史',l.history)}
  ${sections('02 — 理論を耳に結びつける',l.theory)}
- <section class="prose-section listen-section"><div class="section-label">03 — この録音を聴く</div><h2>${esc(l.album)}</h2><p class="artist">${esc(l.artist)}</p>${l.videoId?`<div class="verified-video"><button class="recording-link" data-embed-video="${l.videoId}" aria-label="${esc(l.album)} の公式YouTube録音をページ内で再生">▷ このページで公式録音を再生</button><div id="embedded-video" class="embedded-video"></div></div>`:""}<a class="recording-alt" href="${esc(urlFor(l))}" target="_blank" rel="noopener noreferrer">YouTubeで対象録音を探す ↗</a><p class="micro">${l.videoId?"確認済みの公式アーティストチャンネルの音源を使用。埋め込みが制限される場合は外部検索から。":"対象録音に対応した検索結果を新しいタブで開きます。権利者の音源が見つかった場合はそちらで聴いてください。"}</p><ol class="listening-points">${toHtmlList(l.listen)}</ol></section>
- <section class="prose-section sound-section"><div class="section-label">04 — 音で確かめる</div><h2>音符を読まずに、まず聴く。</h2><p class="micro">音はアプリ内のピアノ風シンセが生成する教材用モデルで、原曲の録音や採譜の再現ではありません。音量を小さめにして開始。</p><div class="mode-switch"><button data-mode="app" class="mode-btn ${state.pianoMode==='app'?'active':''}">アプリで鳴らす</button><button data-mode="real" class="mode-btn ${state.pianoMode==='real'?'active':''}">手元のピアノで試す</button></div><p id="piano-hint" class="hint">${state.pianoMode==='real'?'各音名を見ながら実機で再現。再生ボタンでも参考音を確認できます。':'再生ボタンから発音。聴き比べたら手元の楽器で再現してみて。'}</p>${ex}<button class="stop-button" data-stop>■ 停止</button></section>
- <section class="prose-section"><div class="section-label">05 — ベースで試す</div><div class="practice-box"><span class="smallcaps">PLAYING ASSIGNMENT</span><p>${esc(l.practice)}</p></div></section>
- <section class="prose-section"><div class="section-label">06 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p></section>
- <section class="prose-section"><div class="section-label">07 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
- <section class="prose-section"><div class="section-label">08 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">自動保存（この端末内）。ほかの端末への同期はありません。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
+ ${deeperSections(l)}
+ <section class="prose-section listen-section"><div class="section-label">06 — この録音を聴く</div><h2>${esc(l.album)}</h2><p class="artist">${esc(l.artist)}</p>${l.videoId?`<div class="verified-video"><button class="recording-link" data-embed-video="${l.videoId}" aria-label="${esc(l.album)} の公式YouTube録音をページ内で再生">▷ このページで公式録音を再生</button><div id="embedded-video" class="embedded-video"></div></div>`:""}<a class="recording-alt" href="${esc(urlFor(l))}" target="_blank" rel="noopener noreferrer">YouTubeで対象録音を探す ↗</a><p class="micro">${l.videoId?"確認済みの公式アーティストチャンネルの音源を使用。埋め込みが制限される場合は外部検索から。":"対象録音に対応した検索結果を新しいタブで開きます。権利者の音源が見つかった場合はそちらで聴いてください。"}</p><ol class="listening-points">${toHtmlList(l.listen)}</ol>${deepListen(l)}</section>
+ <section class="prose-section sound-section"><div class="section-label">07 — 音で確かめる</div><h2>音符を読まずに、まず聴く。</h2><p class="micro">音はアプリ内のピアノ風シンセが生成する教材用モデルで、原曲の録音や採譜の再現ではありません。音量を小さめにして開始。</p><div class="mode-switch"><button data-mode="app" class="mode-btn ${state.pianoMode==='app'?'active':''}">アプリで鳴らす</button><button data-mode="real" class="mode-btn ${state.pianoMode==='real'?'active':''}">手元のピアノで試す</button></div><p id="piano-hint" class="hint">${state.pianoMode==='real'?'各音名を見ながら実機で再現。再生ボタンでも参考音を確認できます。':'再生ボタンから発音。聴き比べたら手元の楽器で再現してみて。'}</p>${ex}<button class="stop-button" data-stop>■ 停止</button></section>
+ <section class="prose-section"><div class="section-label">08 — ベースで試す</div><div class="practice-box"><span class="smallcaps">PLAYING ASSIGNMENT</span><p>${esc(l.practice)}</p>${deepLab(l)}</div></section>
+ <section class="prose-section"><div class="section-label">09 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p>${deepAside(l)}</section>
+ <section class="prose-section"><div class="section-label">10 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
+ <section class="prose-section"><div class="section-label">11 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">自動保存（この端末内）。ほかの端末への同期はありません。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
  <div class="next-row">${prev?`<a href="#/lesson/${prev.id}">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a href="#/lesson/${next.id}">${esc(next.title)} →</a>`:'<a href="#/ear">耳トレに進む →</a>'}</div>
  </div><aside class="context-panel"><div class="context-card"><span class="overline">IN THIS SESSION</span><h3>今日の聴き方</h3><p>まず録音を聴く。次に短い教材音を再生。最後にベースかピアノで「音が違って聴こえる理由」を検証する。</p><div class="divider"></div><strong>基準は知識でなく耳</strong><p>理論上は同じスケールでも、下に置く音や発音タイミングで印象が変わる。</p></div><div class="context-card"><span class="overline">SOURCE NOTES</span><div class="source-list">${sources}</div><p class="micro">録音年・音楽家・制作情報は一次情報との照合を推奨。参考リンクは各権利者・組織の公開資料。</p></div></aside></div>`;
  const prior=state['quiz-'+l.id];if(prior!==undefined)markQuiz(l,prior);

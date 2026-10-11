@@ -39,3 +39,20 @@ test('deployment and static application files exist',()=>{
   const workflow=readFileSync(new URL('../.github/workflows/bootstrap.yml',import.meta.url),'utf8');
   assert.match(workflow,/actions\/deploy-pages@v4/);assert.match(workflow,/npm test/);
 });
+
+test('long-form editorial readings cover every lesson with references and usable listening tasks',async()=>{
+ const {readingA}=await import('../src/reading-a.js');
+ const {readingB}=await import('../src/reading-b.js');
+ const readings={...readingA,...readingB};
+ assert.deepEqual(Object.keys(readings).sort(),lessons.map(l=>l.id).sort());
+ for(const [id,r] of Object.entries(readings)){
+   for(const field of ['title','context','analysis','people','listenMap','lab','aside','refs'])assert.ok(r[field],`${id}: ${field}`);
+   assert.ok(r.context.join('').length>200,`${id} context too short`);
+   assert.ok(r.analysis.join('').length>300,`${id} analysis too short`);
+   assert.ok(r.people.length>=3);
+   assert.equal(r.listenMap.length,3);
+   assert.ok(r.lab.length>=50);
+   assert.ok(r.refs.length>=1);
+   for(const [title,url] of r.refs)assert.ok(title&&/^https:\/\//.test(url),`${id} invalid source ${url}`);
+ }
+});
