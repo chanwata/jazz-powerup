@@ -81,4 +81,34 @@ export class StudyAudio {
     const ms=(time-this.ctx.currentTime+0.30)*1000;
     this.endHandle=setTimeout(()=>{this.isPlaying=false;this.endHandle=null;},ms);
   }
+
+  async playPattern(exercise,speed=1,repeat=1){
+    await this.ensure();
+    const bus=this.newBus();
+    const rate=Math.min(1.3,Math.max(0.7,Number(speed)||1));
+    const bpm=Math.min(240,Math.max(36,exercise.bpm*rate));
+    const beat=60/bpm;
+    let at=this.ctx.currentTime+0.09;
+    const parse=raw=>String(raw||'').trim().split(/\\s+/).filter(Boolean).map(token=>{
+      const m=/^([A-G][#b]?-?\\d+|_)@(\\d+(?:\\.\\d+)?)(?:\\/(\\d+(?:\\.\\d+)?))?$/.exec(token);
+      if(!m)throw new Error('Invalid timed note: '+token);
+      return {note:m[1],at:Number(m[2]),length:m[3]?Number(m[3]):0.72};
+    });
+    for(let cycle=0;cycle<Math.max(1,Math.min(2,repeat));cycle++){
+      for(const part of exercise.bars){
+        const count=Number(part.beats)||4;
+        const upper=String(part.p||'').trim().split(/\\s+/).filter(Boolean);
+        for(const [i,note] of upper.entries())this.tone(note,at+Math.min(0.08,i*0.013),Math.min(2.4,count*beat*0.80),0.11/Math.sqrt(Math.max(1,upper.length/2)),bus);
+        for(const e of parse(part.b)){
+          if(e.note!=='_')this.tone(e.note,at+e.at*beat,Math.min(Math.max(.12,e.length*beat),count*beat),0.28,bus);
+        }
+        for(const e of parse(part.lead)){
+          if(e.note!=='_')this.tone(e.note,at+e.at*beat,Math.max(.12,e.length*beat),0.14,bus);
+        }
+        at+=count*beat;
+      }
+    }
+    const ms=(at-this.ctx.currentTime+0.5)*1000;
+    this.endHandle=setTimeout(()=>{this.isPlaying=false;this.endHandle=null;},ms);
+  }
 }
