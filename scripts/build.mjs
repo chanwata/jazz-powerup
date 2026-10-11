@@ -1,0 +1,10 @@
+import {rm,mkdir,copyFile,cp} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {resolve,dirname} from 'node:path';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const dist=resolve(root,'dist');
+await rm(dist,{force:true,recursive:true});
+await mkdir(dist,{recursive:true});
+for(const name of ['index.html','favicon.svg','.nojekyll']) await copyFile(resolve(root,name),resolve(dist,name));
+await cp(resolve(root,'src'),resolve(dist,'src'),{recursive:true});
+console.log('Static site staged in dist/');
