@@ -8,11 +8,14 @@ const deepReading={...readingA,...readingB};
 import {StudyAudio,noteToMidi} from './audio.js';
 import {dashboardSnapshot,logLearning,recordReview} from './dashboard.js';
 import {homeMarkup} from './dashboard-view.js';
+import {renderAdaptiveLesson} from './learning-model.js';
+import {renderJournalPage} from './journal-ui.js';
+import {verifyPrivateRepo,setGithubToken,forgetGithubToken,saveLearningToGitHub,readLearningFromGitHub,readTutorFromGitHub,acceptRemoteSync,MENTOR_PROMPT,normalizeLearningState} from './github-learning.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STORE='after-parker-v1';
 function load(){try{const p=JSON.parse(localStorage.getItem(STORE));if(p && typeof p==='object')return p}catch{}return {}};
-let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5,...load()};
+let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5,reflections:{},mentorFeedback:{},...load()};
 const audio=new StudyAudio();
 window.addEventListener('score-audio-start',()=>audio.stop());
 let currentView='home';let currentId='01';let selectedEarId=earDrills[0].id;let homeReveal=false;
@@ -52,6 +55,10 @@ function renderHome(){
  $('app').innerHTML=homeMarkup(snapshot,state,esc,homeReveal);
  document.title='ホーム・学習ダッシュボード — AFTER PARKER';
 }
+function renderJournal(){
+ $('app').innerHTML=renderJournalPage(state,lessons,esc);
+ document.title='GitHub学習ログ — AFTER PARKER';
+}
 function renderLesson(){
  const l=lessons.find(x=>x.id===currentId)||lessons[0];currentId=l.id;
  const i=lessons.indexOf(l),prev=lessons[i-1],next=lessons[i+1];
@@ -61,6 +68,7 @@ function renderLesson(){
  $('app').innerHTML=`
  <div class="hero"><div class="hero-top"><span class="overline">LESSON ${l.id} / ${String(lessons.length).padStart(2,'0')} · ${esc(l.priority)}</span><div class="hero-chips">${tags(l)}</div></div><h1>${esc(l.title)}</h1><p class="hero-sub">${esc(l.subtitle)}</p><p class="hero-intro">${esc(l.premise)}</p></div>
  <div class="lesson-grid"><div class="article">
+ ${renderAdaptiveLesson(l,state,esc)}
  ${sections('01 — 背景とジャズ史',l.history)}
  ${sections('02 — 理論を耳に結びつける',l.theory)}
  ${deeperSections(l)}
@@ -70,7 +78,7 @@ function renderLesson(){
  ${practicePanel(l)}
  <section class="prose-section"><div class="section-label">11 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p>${deepAside(l)}</section>
  <section class="prose-section"><div class="section-label">12 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
- <section class="prose-section"><div class="section-label">13 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">自動保存（この端末内）。ほかの端末への同期はありません。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
+ <section class="prose-section"><div class="section-label">13 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">この端末に自動保存。メモに合わせてページ冒頭の「個別練習」が切り替わります。<a href="#/journal">GitHubに同期 ↗</a></p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
  <div class="next-row">${prev?`<a href="#/lesson/${prev.id}">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a href="#/lesson/${next.id}">${esc(next.title)} →</a>`:'<a href="#/ear">耳トレに進む →</a>'}</div>
  </div><aside class="context-panel"><div class="context-card"><span class="overline">IN THIS SESSION</span><h3>今日の聴き方</h3><p>まず録音を聴く。次に短い教材音を再生。最後にベースかピアノで「音が違って聴こえる理由」を検証する。</p><div class="divider"></div><strong>基準は知識でなく耳</strong><p>理論上は同じスケールでも、下に置く音や発音タイミングで印象が変わる。</p></div><div class="context-card"><span class="overline">SOURCE NOTES</span><div class="source-list">${sources}</div><p class="micro">録音年・音楽家・制作情報は一次情報との照合を推奨。参考リンクは各権利者・組織の公開資料。</p></div></aside></div>`;
  const prior=state['quiz-'+l.id];if(prior!==undefined)markQuiz(l,prior);
@@ -109,23 +117,23 @@ function renderKeyboard(){
 function renderIndex(){
  const glossary=[['Guide tones','コードの3度と7度など、和声機能を明示しやすい音。'],['Upper structure','ベースや基本和音の上側で響く構造。上部構造三和音はその特殊な場合。'],['Avoid note','安定した保持音としては扱いに注意が必要な音。絶対的な禁則ではない。'],['Lydian','メジャースケールの4度が#4になったモード。#11はその特徴音。'],['Cross-rhythm','共通の基準パルスに対する異なる周期やアクセントの関係。'],['Microtiming','基準となるグリッドからの発音位置の小さな偏差。'],['Modal jazz','固定的なコードチェンジよりモードや調性領域を土台とする即興。'],['Harmolodics','オーネット・コールマンの音楽思想。旋律・和声・リズムの関係を再考する。'],['M-Base','構造化された即興を通じた創造的実践の総称。変拍子のジャンル名ではない。'],['Tumbao','アフロ・キューバン音楽で用いられる反復的なリズムパターン。ベースの先取りも重要。']];
  const achieved=lessons.filter(l=>state.completed[l.id]).length;
- $('app').innerHTML=`<div class="hero compact"><span class="overline">INDEX / REFERENCE / BACKUP</span><h1>人・年・概念から横断する。</h1><p class="hero-intro">年代順に眺めると、発展は一本道でないことが見えてくる。教材の進捗とメモは自分の端末に保存。</p></div><section class="prose-section"><div class="section-label">COURSE INDEX</div><div class="index-grid">${lessons.map(l=>`<a class="index-card" href="#/lesson/${l.id}"><span class="overline">${l.era} · ${l.tag}</span><strong>${l.id} ${esc(l.title)}</strong><small>${esc(l.artist)}</small></a>`).join('')}</div></section><section class="prose-section"><div class="section-label">GLOSSARY / TERMS</div><div class="glossary">${glossary.map(([word,def])=>`<div><strong>${esc(word)}</strong><p>${esc(def)}</p></div>`).join('')}</div></section><section class="prose-section"><div class="section-label">PROGRESS & BACKUP</div><h2>${achieved} / ${lessons.length} レッスン完了</h2><p>端末を変える場合はJSONを書き出して、新端末で復元できます。自動同期はありません。</p><div class="backup-actions"><button class="plain-button" data-export>進捗・メモをJSON保存</button><label class="file-button">JSONを読み込んで復元<input id="import-progress" type="file" accept=".json,application/json" hidden></label><button class="plain-button danger" data-reset>すべてリセット</button></div></section>`;
+ $('app').innerHTML=`<div class="hero compact"><span class="overline">INDEX / REFERENCE / BACKUP</span><h1>人・年・概念から横断する。</h1><p class="hero-intro">年代順に眺めると、発展は一本道でないことが見えてくる。教材の進捗とメモは自分の端末に保存。</p></div><section class="prose-section"><div class="section-label">COURSE INDEX</div><div class="index-grid">${lessons.map(l=>`<a class="index-card" href="#/lesson/${l.id}"><span class="overline">${l.era} · ${l.tag}</span><strong>${l.id} ${esc(l.title)}</strong><small>${esc(l.artist)}</small></a>`).join('')}</div></section><section class="prose-section"><div class="section-label">GLOSSARY / TERMS</div><div class="glossary">${glossary.map(([word,def])=>`<div><strong>${esc(word)}</strong><p>${esc(def)}</p></div>`).join('')}</div></section><section class="prose-section"><div class="section-label">PROGRESS & BACKUP</div><h2>${achieved} / ${lessons.length} レッスン完了</h2><p>端末を変える場合はJSONのバックアップも使えます。GitHubとの明示的な同期は「学習ログ」ページで設定できます。<a href="#/journal">GitHubで学習メモを同期 ↗</a></p><div class="backup-actions"><button class="plain-button" data-export>進捗・メモをJSON保存</button><label class="file-button">JSONを読み込んで復元<input id="import-progress" type="file" accept=".json,application/json" hidden></label><button class="plain-button danger" data-reset>すべてリセット</button></div></section>`;
  document.title='索引 — AFTER PARKER';
 }
 function route(){
- const parts=location.hash.replace(/^#\/?/,'').split('/');currentView=['home','lesson','ear','keyboard','index'].includes(parts[0])?parts[0]:'home';
+ const parts=location.hash.replace(/^#\/?/,'').split('/');currentView=['home','lesson','ear','keyboard','index','journal'].includes(parts[0])?parts[0]:'home';
  if(currentView==='lesson')currentId=lessons.some(l=>l.id===parts[1])?parts[1]:'01';
  homeReveal=false;
  audio.stop();
  document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===currentView));
- if(currentView==='home')renderHome();else if(currentView==='lesson')renderLesson();else if(currentView==='ear')renderEar();else if(currentView==='keyboard')renderKeyboard();else renderIndex();
+ if(currentView==='home')renderHome();else if(currentView==='lesson')renderLesson();else if(currentView==='ear')renderEar();else if(currentView==='keyboard')renderKeyboard();else if(currentView==='journal')renderJournal();else renderIndex();
  renderMenu();window.scrollTo({top:0,behavior:'instant'});
 }
 function toast(msg){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=msg;el.classList.add('visible');clearTimeout(toast.handle);toast.handle=setTimeout(()=>el.classList.remove('visible'),2900)}
 async function safePlay(task){try{await task();toast('再生中。音量に注意して聴いてみて。')}catch(err){toast(err.message||'音声を再生できませんでした')}}
 $('lesson-search').addEventListener('input',renderMenu);
 window.addEventListener('hashchange',route);
-document.addEventListener('click',e=>{
+document.addEventListener('click',async e=>{
  const nav=e.target.closest('[data-view]');if(nav){location.hash=`/${nav.dataset.view}`;if(nav.dataset.view==='home'&&currentView==='home')renderHome();return}
  const minutes=e.target.closest('[data-home-minutes]');if(minutes){state.homeMinutes=Number(minutes.dataset.homeMinutes);save();renderHome();return}
  const weekly=e.target.closest('[data-home-weekly]');if(weekly){state.weeklyTarget=Number(weekly.dataset.homeWeekly);save();renderHome();return}
@@ -135,6 +143,48 @@ document.addEventListener('click',e=>{
    const [id,answer]=review.dataset.homeReview.split(':');
    if(!lessons.some(x=>x.id===id&&state.completed?.[id]))return;
    recordReview(state,id,answer==='yes');homeReveal=false;save();renderHome();toast(answer==='yes'?'思い出せた！ 次の復習を設定したよ。':'次は少し早めに、同じ音へ戻ろう。');return
+ }
+ const understanding=e.target.closest('[data-understanding]');if(understanding){
+   const rating=understanding.dataset.understanding;
+   if(!['uncertain','clear','applied'].includes(rating))return;
+   state.reflections||={};state.reflections[currentId]=rating;logLearning(state,'reflection',currentId);save();
+   const lesson=lessons.find(l=>l.id===currentId),el=$('adaptive-panel');if(lesson&&el)el.outerHTML=renderAdaptiveLesson(lesson,state,esc);
+   toast('理解度を記録したよ。次の説明を調整した。');return;
+ }
+ const connect=e.target.closest('[data-journal-connect]');if(connect){
+   const credential=$('journal-token')?.value||'';
+   if(!credential){toast('GitHub Tokenを入力してください。');return;}
+   setGithubToken(credential);if($('journal-token'))$('journal-token').value='';
+   connect.disabled=true;
+   try{await verifyPrivateRepo();renderJournal();toast('非公開リポジトリへの接続を確認しました。');}
+   catch(err){forgetGithubToken();renderJournal();toast(err.message);}
+   return;
+ }
+ if(e.target.closest('[data-journal-disconnect]')){forgetGithubToken();renderJournal();toast('このタブのGitHub接続を解除しました。');return;}
+ const push=e.target.closest('[data-journal-push]');if(push){
+   push.disabled=true;
+   try{const result=await saveLearningToGitHub(state,lessons,earDrills);renderJournal();toast('非公開GitHubに学習履歴を保存しました。');}
+   catch(err){push.disabled=false;toast(err.message);}return;
+ }
+ const pull=e.target.closest('[data-journal-pull]');if(pull){
+   pull.disabled=true;
+   try{
+     const remote=await readLearningFromGitHub(lessons,earDrills);
+     const message='非公開GitHubには'+remote.noteCount+'件のレッスンメモがあります。この端末の記録はGitHubのデータで置き換わります。事前に「索引」からJSONバックアップを保存しましたか？ よろしければOKを選んでください。';
+     if(!confirm(message)){pull.disabled=false;return;}
+     const previous=JSON.stringify({format:'after-parker-v1',savedAt:new Date().toISOString(),data:state},null,2);
+     const backup=new Blob([previous],{type:'application/json'}),url=URL.createObjectURL(backup),link=document.createElement('a');
+     link.href=url;link.download='jazz-before-github-import.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
+     state=remote.data;save();acceptRemoteSync(remote.sha);location.reload();
+   }catch(err){pull.disabled=false;toast(err.message);}return;
+ }
+ if(e.target.closest('[data-journal-mentor]')){
+   try{const data=await readTutorFromGitHub(lessons);state.mentorFeedback=data;save();renderJournal();toast('講師コメントを'+Object.keys(data).length+'件取り込みました。');}
+   catch(err){toast(err.message);}return;
+ }
+ if(e.target.closest('[data-journal-copy]')){
+   try{await navigator.clipboard.writeText(MENTOR_PROMPT);toast('ChatGPTに送るレビュー依頼をコピーしました。');}
+   catch{window.prompt('以下をコピーしてChatGPTに送ってください',MENTOR_PROMPT);}return;
  }
  const video=e.target.closest('[data-embed-video]');if(video){const id=video.dataset.embedVideo;if(!/^[\w-]{11}$/.test(id))return;const target=$('embedded-video');if(target){target.innerHTML=`<iframe title="公式アーティストのYouTube音源" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube-nocookie.com/embed/${id}?rel=0"></iframe>`;video.textContent='▶ プレーヤーを開きました';video.disabled=true}return}
  const ps=e.target.closest('[data-practice-speed]');if(ps){state.practiceSpeed=Number(ps.dataset.practiceSpeed);save();document.querySelectorAll('[data-practice-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.practiceSpeed)===state.practiceSpeed));return}
@@ -153,7 +203,7 @@ document.addEventListener('click',e=>{
  const pb=e.target.closest('[data-preset-bass]');if(pb){safePlay(()=>audio.playChord({bass:pb.dataset.presetBass,notes:['E3','A3','D4','G4','B4']}));return}
  const p11=e.target.closest('[data-preset-11]');if(p11){safePlay(()=>audio.playChord({bass:'F2',notes:['A3','E4',p11.dataset.preset11,'D4']}));return}
  const exportBtn=e.target.closest('[data-export]');if(exportBtn){const blob=new Blob([JSON.stringify({format:'after-parker-v1',savedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='after-parker-progress.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('JSONを書き出しました');return}
- const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5};save();route();toast('端末内の学習履歴をリセットしました')}return}
+ const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5,reflections:{},mentorFeedback:{}};save();route();toast('端末内の学習履歴をリセットしました')}return}
 });
 document.addEventListener('change',async e=>{
  if(e.target.id==='octave-selector'){state.startOctave=Number(e.target.value);save();renderKeyboard();return}
@@ -161,14 +211,20 @@ document.addEventListener('change',async e=>{
    try{const f=e.target.files?.[0];if(!f)return;if(f.size>1024*1024)throw new Error('ファイルが大きすぎます');const data=JSON.parse(await f.text());if(data.format!=='after-parker-v1'||typeof data.data!=='object'||data.data===null)throw new Error('未対応のJSON形式');
      const p=data.data;const ids=new Set(lessons.map(l=>l.id));const ears=new Set(earDrills.map(d=>d.id));
      state={completed:Object.fromEntries(Object.entries(p.completed||{}).filter(([k,v])=>ids.has(k)&&typeof v==='boolean')),notes:Object.fromEntries(Object.entries(p.notes||{}).filter(([k,v])=>ids.has(k)&&typeof v==='string').map(([k,v])=>[k,v.slice(0,50000)])),ear:Object.fromEntries(Object.entries(p.ear||{}).filter(([k,v])=>ears.has(k)&&['A','B'].includes(v))),pianoMode:['app','real'].includes(p.pianoMode)?p.pianoMode:'app',startOctave:[2,3,4].includes(p.startOctave)?p.startOctave:3,practiceSpeed:[.75,1,1.25].includes(p.practiceSpeed)?p.practiceSpeed:1,practiceDone:Object.fromEntries(Object.entries(p.practiceDone||{}).filter(([k,v])=>/^\d{2}:[012]$/.test(k)&&practicePlans[k.slice(0,2)]&&typeof v==='boolean'))};
-     state.studyEvents=Array.isArray(p.studyEvents)?p.studyEvents.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.day)&&['lesson','practice','quiz','ear','session','review-recalled','review-again'].includes(e.kind)&&typeof e.id==='string'&&typeof e.at==='string').slice(-1200).map(e=>({day:e.day,kind:e.kind,id:e.id.slice(0,24),at:e.at.slice(0,40)})):[];
+     state.studyEvents=Array.isArray(p.studyEvents)?p.studyEvents.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.day)&&['lesson','practice','quiz','ear','session','review-recalled','review-again','reflection'].includes(e.kind)&&typeof e.id==='string'&&typeof e.at==='string').slice(-1200).map(e=>({day:e.day,kind:e.kind,id:e.id.slice(0,24),at:e.at.slice(0,40)})):[];
      state.reviews=Object.fromEntries(Object.entries(p.reviews||{}).filter(([id,v])=>ids.has(id)&&v&&Number.isInteger(v.count)&&v.count>=0&&v.count<=5&&/^\d{4}-\d{2}-\d{2}$/.test(v.nextDue)&&/^\d{4}-\d{2}-\d{2}$/.test(v.last)).map(([id,v])=>[id,{count:v.count,last:v.last,nextDue:v.nextDue,attempts:Number.isInteger(v.attempts)?v.attempts:1}]));
      state.weeklyTarget=[2,3,4,5,7].includes(p.weeklyTarget)?p.weeklyTarget:3;
      state.homeMinutes=[5,15,25].includes(p.homeMinutes)?p.homeMinutes:5;
+     state.reflections=Object.fromEntries(Object.entries(p.reflections||{}).filter(([id,v])=>ids.has(id)&&['uncertain','clear','applied'].includes(v)));
+     state.mentorFeedback=(p.mentorFeedback&&typeof p.mentorFeedback==='object')?Object.fromEntries(Object.entries(p.mentorFeedback).filter(([id,v])=>ids.has(id)&&v&&typeof v.explanation==='string').map(([id,v])=>[id,{title:String(v.title||'').slice(0,150),explanation:v.explanation.slice(0,4000),listening:String(v.listening||'').slice(0,2000),bassTask:String(v.bassTask||'').slice(0,2000),question:String(v.question||'').slice(0,1000)}])):{};
      for(const l of lessons){if([0,1,2].includes(p['quiz-'+l.id]))state['quiz-'+l.id]=p['quiz-'+l.id]}
      save();route();toast('復元できました');
    }catch(err){toast('復元できません：'+err.message)}
  }
 });
-document.addEventListener('input',e=>{if(e.target.id==='lesson-note'){state.notes[currentId]=e.target.value;save()}});
+document.addEventListener('input',e=>{if(e.target.id==='lesson-note'){
+ state.notes[currentId]=e.target.value;save();
+ const lesson=lessons.find(l=>l.id===currentId),panel=$('adaptive-panel');
+ if(lesson&&panel)panel.outerHTML=renderAdaptiveLesson(lesson,state,esc);
+}});
 if(!location.hash)location.hash='/home';route();
