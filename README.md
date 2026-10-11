@@ -36,20 +36,20 @@ python3 -m http.server 8000
 
 ## GitHub Pagesでの公開
 
-GitHub CLIで `chanwata` にログインしたPCで `bash publish.sh` を実行すると、リポジトリ作成または更新、push、Pages設定の試行まで自動実行します。事前に `gh auth login` とNode.js 22の導入が必要です。
+この教材は [chanwata/jazz-powerup](https://github.com/chanwata/jazz-powerup) の `main` にアップロード済みです。GitHub Actions `Bootstrap Jazz Powerup` で自動テストと静的ビルドは成功しました。
 
-手動の場合：
+**初回のみ必要な設定（リポジトリ管理者）：**
 
-1. 公開用に `chanwata/jazz-powerup` という**空の公開リポジトリ**を作る。
-2. このプロジェクトのファイルをそのリポジトリの `main` にpushする。
-3. リポジトリの **Settings → Pages → Build and deployment → Source = GitHub Actions** にする。
-4. **Actions** タブで `Test and deploy Pages` が成功すると `https://chanwata.github.io/jazz-powerup/` で公開できる。
+1. [Settings → Pages](https://github.com/chanwata/jazz-powerup/settings/pages) を開く。
+2. **Build and deployment → Source = GitHub Actions** に変更する。
+3. [Actions → Bootstrap Jazz Powerup](https://github.com/chanwata/jazz-powerup/actions/workflows/bootstrap.yml) から `Run workflow` を実行するか、失敗した実行の `Re-run jobs` を選ぶ。
+4. 成功後、`https://chanwata.github.io/jazz-powerup/` で公開。
 
-必要な権限はワークフロー内で `contents: read`, `pages: write`, `id-token: write` を要求。リポジトリ設定やユーザーの権限によっては追加操作が必要です。URLは実際のデプロイ完了を確認するまでは**公開済みの保証ではありません**。
+`main` への変更は `.github/workflows/bootstrap.yml` がテスト・ビルド・Pages公開を自動実行します。公開URLはActionsのdeployが成功するまでは有効ではありません。
 
 ## 自動化とテスト
 
-`.github/workflows/pages.yml` でNode.js標準 `node --test` を実行してから、`npm run build` で最小の静的サイトを `dist/` にコピーして、ActionsのPages artifactをデプロイします。ビルドに外部ライブラリは不要。Node.js 22以上推奨。
+`.github/workflows/bootstrap.yml` でNode.js標準 `node --test` を実行してから、`npm run build` で最小の静的サイトを `dist/` にコピーして、ActionsのPages artifactをデプロイします。ビルドに外部ライブラリは不要。Node.js 22以上推奨。
 
 ## 教材の立場
 
@@ -70,7 +70,7 @@ src/style.css     PC / mobileレスポンシブ
 scripts/build.mjs dist/へのコピー
 .github/workflows/pages.yml
 tests/course.test.js テスト
-publish.sh        GitHub CLIでの公開支援
+docs/pages.yml.example 参考のPagesワークフロー構成
 ```
 
 ## 将来の改善候補
