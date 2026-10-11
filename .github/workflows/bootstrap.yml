@@ -27,6 +27,7 @@ jobs:
             sed -i 's/jazz-after-parker/jazz-powerup/g' package.json README.md
             mkdir -p docs
             mv .github/workflows/pages.yml docs/pages.yml.example
+            sed -i "s|.github/workflows/pages.yml|.github/workflows/bootstrap.yml|g" tests/course.test.js
             rm .course-source.tar.xz
           fi
       - name: Setup Node
