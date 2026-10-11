@@ -30,6 +30,16 @@ jobs:
             sed -i "s|.github/workflows/pages.yml|.github/workflows/bootstrap.yml|g" tests/course.test.js
             rm .course-source.tar.xz
           fi
+      - name: Install precise scores if staged
+        shell: bash
+        run: |
+          if test -f .score-edition.part0; then
+            cat .score-edition.part0 .score-edition.part1 .score-edition.part2 .score-edition.part3 > .score-edition.tar.xz
+            echo 'd5686e2091302488f272abd597497d2096b0d66f98cc606d4e688220e902225e  .score-edition.tar.xz' | sha256sum -c -
+            python3 -c 'import tarfile; expected={"src/score-book.js","src/score-lab.js","src/score-model.js","src/score-player.js","src/score-render.js","src/score-symbols.js","src/score-lab.css","tests/score.test.js","docs/score-edition.md","docs/score-symbol-license.txt","scripts/install-score-edition.py"}; t=tarfile.open(".score-edition.tar.xz"); members=t.getmembers(); assert len(members)==len(expected) and {m.name for m in members}==expected and all(m.isfile() for m in members), "Unexpected score archive"; t.extractall(".",filter="data"); t.close()'
+            python3 scripts/install-score-edition.py
+            rm .score-edition.part0 .score-edition.part1 .score-edition.part2 .score-edition.part3 .score-edition.tar.xz
+          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
