@@ -19,12 +19,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Restore course source
+      - name: Restore course source if required
         shell: bash
         run: |
-          tar -xJf .course-source.tar.xz
-          sed -i 's/jazz-after-parker/jazz-powerup/g' package.json README.md
-          rm .course-source.tar.xz
+          if test -f .course-source.tar.xz; then
+            tar -xJf .course-source.tar.xz
+            sed -i 's/jazz-after-parker/jazz-powerup/g' package.json README.md
+            mkdir -p docs
+            mv .github/workflows/pages.yml docs/pages.yml.example
+            rm .course-source.tar.xz
+          fi
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -40,7 +44,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "Install complete Jazz Powerup course and Pages workflow"
+            git commit -m "Install complete Jazz Powerup course source"
             git push origin HEAD:main
           fi
       - name: Configure Pages
