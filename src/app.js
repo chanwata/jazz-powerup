@@ -6,13 +6,15 @@ import {readingA} from './reading-a.js';
 import {readingB} from './reading-b.js';
 const deepReading={...readingA,...readingB};
 import {StudyAudio,noteToMidi} from './audio.js';
+import {dashboardSnapshot,logLearning,recordReview} from './dashboard.js';
+import {homeMarkup} from './dashboard-view.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const STORE='after-parker-v1';
 function load(){try{const p=JSON.parse(localStorage.getItem(STORE));if(p && typeof p==='object')return p}catch{}return {}};
-let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,...load()};
+let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5,...load()};
 const audio=new StudyAudio();
-let currentView='lesson';let currentId='01';let selectedEarId=earDrills[0].id;
+let currentView='home';let currentId='01';let selectedEarId=earDrills[0].id;let homeReveal=false;
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){console.warn('Storage unavailable',e)}}
 function progressUpdate(){const done=lessons.filter(l=>state.completed[l.id]).length;const percent=Math.round(done/lessons.length*100);$('progress-summary').textContent=`${done} / ${lessons.length} 完了`;$('progress-percent').textContent=`${percent}%`;$('progress-bar').style.width=percent+'%';}
 function urlFor(l){return `https://www.youtube.com/results?search_query=${encodeURIComponent(l.query)}`;}
@@ -43,6 +45,11 @@ function renderMenu(){
  const q=$('lesson-search').value.trim().toLocaleLowerCase();
  $('lesson-menu').innerHTML=lessons.filter(l=>(`${l.title} ${l.artist} ${l.era} ${l.tag} ${l.subtitle}`).toLocaleLowerCase().includes(q)).map(l=>`<a href="#/lesson/${l.id}" class="lesson-link ${currentView==='lesson'&&currentId===l.id?'selected':''}"><span class="lesson-no">${l.id}</span><span class="lesson-caption"><strong>${esc(l.title)}</strong><small>${esc(l.artist.split('/')[0].trim())} · ${l.era}</small></span><span class="done-mark">${state.completed[l.id]?'✓':''}</span></a>`).join('')||'<p class="muted small">該当なし</p>';
  progressUpdate();
+}
+function renderHome(){
+ const snapshot=dashboardSnapshot(state,lessons,earDrills);
+ $('app').innerHTML=homeMarkup(snapshot,state,esc,homeReveal);
+ document.title='ホーム・学習ダッシュボード — AFTER PARKER';
 }
 function renderLesson(){
  const l=lessons.find(x=>x.id===currentId)||lessons[0];currentId=l.id;
@@ -105,11 +112,12 @@ function renderIndex(){
  document.title='索引 — AFTER PARKER';
 }
 function route(){
- const parts=location.hash.replace(/^#\/?/,'').split('/');currentView=['lesson','ear','keyboard','index'].includes(parts[0])?parts[0]:'lesson';
+ const parts=location.hash.replace(/^#\/?/,'').split('/');currentView=['home','lesson','ear','keyboard','index'].includes(parts[0])?parts[0]:'home';
  if(currentView==='lesson')currentId=lessons.some(l=>l.id===parts[1])?parts[1]:'01';
+ homeReveal=false;
  audio.stop();
  document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===currentView));
- if(currentView==='lesson')renderLesson();else if(currentView==='ear')renderEar();else if(currentView==='keyboard')renderKeyboard();else renderIndex();
+ if(currentView==='home')renderHome();else if(currentView==='lesson')renderLesson();else if(currentView==='ear')renderEar();else if(currentView==='keyboard')renderKeyboard();else renderIndex();
  renderMenu();window.scrollTo({top:0,behavior:'instant'});
 }
 function toast(msg){let el=$('toast');if(!el){el=document.createElement('div');el.id='toast';el.setAttribute('role','status');document.body.appendChild(el)}el.textContent=msg;el.classList.add('visible');clearTimeout(toast.handle);toast.handle=setTimeout(()=>el.classList.remove('visible'),2900)}
@@ -117,25 +125,34 @@ async function safePlay(task){try{await task();toast('再生中。音量に注�
 $('lesson-search').addEventListener('input',renderMenu);
 window.addEventListener('hashchange',route);
 document.addEventListener('click',e=>{
- const nav=e.target.closest('[data-view]');if(nav){location.hash=`/${nav.dataset.view}`;return}
+ const nav=e.target.closest('[data-view]');if(nav){location.hash=`/${nav.dataset.view}`;if(nav.dataset.view==='home'&&currentView==='home')renderHome();return}
+ const minutes=e.target.closest('[data-home-minutes]');if(minutes){state.homeMinutes=Number(minutes.dataset.homeMinutes);save();renderHome();return}
+ const weekly=e.target.closest('[data-home-weekly]');if(weekly){state.weeklyTarget=Number(weekly.dataset.homeWeekly);save();renderHome();return}
+ const session=e.target.closest('[data-home-session-done]');if(session){logLearning(state,'session',String(state.homeMinutes||5));save();renderHome();toast('今日の練習を記録したよ。次は音を聴いて確かめよう。');return}
+ const reveal=e.target.closest('[data-home-reveal]');if(reveal){homeReveal=true;renderHome();return}
+ const review=e.target.closest('[data-home-review]');if(review){
+   const [id,answer]=review.dataset.homeReview.split(':');
+   if(!lessons.some(x=>x.id===id&&state.completed?.[id]))return;
+   recordReview(state,id,answer==='yes');homeReveal=false;save();renderHome();toast(answer==='yes'?'思い出せた！ 次の復習を設定したよ。':'次は少し早めに、同じ音へ戻ろう。');return
+ }
  const video=e.target.closest('[data-embed-video]');if(video){const id=video.dataset.embedVideo;if(!/^[\w-]{11}$/.test(id))return;const target=$('embedded-video');if(target){target.innerHTML=`<iframe title="公式アーティストのYouTube音源" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" src="https://www.youtube-nocookie.com/embed/${id}?rel=0"></iframe>`;video.textContent='▶ プレーヤーを開きました';video.disabled=true}return}
  const ps=e.target.closest('[data-practice-speed]');if(ps){state.practiceSpeed=Number(ps.dataset.practiceSpeed);save();document.querySelectorAll('[data-practice-speed]').forEach(b=>b.classList.toggle('active',Number(b.dataset.practiceSpeed)===state.practiceSpeed));return}
  const pp=e.target.closest('[data-play-practice]');if(pp){const [id,index]=pp.dataset.playPractice.split(':');const sample=practicePlans[id]?.examples[Number(index)];if(sample)safePlay(()=>audio.playPattern(sample,state.practiceSpeed||1,Number(pp.dataset.repeat)||1));return}
- const pd=e.target.closest('[data-practice-done]');if(pd){const key=pd.dataset.practiceDone;state.practiceDone ||= {};state.practiceDone[key]=!state.practiceDone[key];pd.textContent=state.practiceDone[key]?'✓ 練習済み':'○ チェック';pd.setAttribute('aria-pressed',String(!!state.practiceDone[key]));pd.classList.toggle('done',!!state.practiceDone[key]);save();return}
+ const pd=e.target.closest('[data-practice-done]');if(pd){const key=pd.dataset.practiceDone;state.practiceDone ||= {};state.practiceDone[key]=!state.practiceDone[key];pd.textContent=state.practiceDone[key]?'✓ 練習済み':'○ チェック';pd.setAttribute('aria-pressed',String(!!state.practiceDone[key]));pd.classList.toggle('done',!!state.practiceDone[key]);if(state.practiceDone[key])logLearning(state,'practice',key);save();return}
  const stop=e.target.closest('[data-stop]');if(stop){audio.stop();toast('停止しました');return}
  const play=e.target.closest('[data-play]');if(play){const [id,index]=play.dataset.play.split(':');const l=lessons.find(l=>l.id===id);if(l?.examples[Number(index)])safePlay(()=>audio.playSequence(l.examples[Number(index)]));return}
  const mode=e.target.closest('[data-mode]');if(mode){state.pianoMode=mode.dataset.mode;save();renderLesson();return}
- const c=e.target.closest('[data-complete]');if(c){const id=c.dataset.complete;state.completed[id]=!state.completed[id];save();renderLesson();renderMenu();toast(state.completed[id]?'レッスンを完了にしました':'未完了に戻しました');return}
- const q=e.target.closest('[data-lesson-answer]');if(q){const l=lessons.find(l=>l.id===currentId);if(!l)return;const ans=Number(q.dataset.lessonAnswer);state['quiz-'+l.id]=ans;save();markQuiz(l,ans);$('quiz-feedback').textContent=(ans===l.quiz.answer?'✓ 正解。':'✦ 復習してみよう。')+l.quiz.why;$('quiz-feedback').classList.remove('hidden');return}
+ const c=e.target.closest('[data-complete]');if(c){const id=c.dataset.complete;state.completed[id]=!state.completed[id];if(state.completed[id])logLearning(state,'lesson',id);save();renderLesson();renderMenu();toast(state.completed[id]?'レッスンを完了にしました':'未完了に戻しました');return}
+ const q=e.target.closest('[data-lesson-answer]');if(q){const l=lessons.find(l=>l.id===currentId);if(!l)return;const ans=Number(q.dataset.lessonAnswer);state['quiz-'+l.id]=ans;logLearning(state,'quiz',l.id);save();markQuiz(l,ans);$('quiz-feedback').textContent=(ans===l.quiz.answer?'✓ 正解。':'✦ 復習してみよう。')+l.quiz.why;$('quiz-feedback').classList.remove('hidden');return}
  const select=e.target.closest('[data-ear-id]');if(select){selectedEarId=select.dataset.earId;renderEar();return}
  const pear=e.target.closest('[data-play-ear]');if(pear){const [id,p]=pear.dataset.playEar.split(':');const d=earDrills.find(d=>d.id===id);const spec=d?.[p.toLowerCase()];if(spec)safePlay(()=>spec.sequence?audio.playSequence({...spec,bpm:75}):audio.playChord(spec));return}
- const ans=e.target.closest('[data-answer-ear]');if(ans){const [id,choice]=ans.dataset.answerEar.split(':');state.ear[id]=choice;save();renderEar();return}
+ const ans=e.target.closest('[data-answer-ear]');if(ans){const [id,choice]=ans.dataset.answerEar.split(':');state.ear[id]=choice;logLearning(state,'ear',id);save();renderEar();return}
  const clear=e.target.closest('[data-clear-ear]');if(clear){delete state.ear[clear.dataset.clearEar];save();renderEar();return}
  const key=e.target.closest('[data-key-note]');if(key){safePlay(()=>audio.playNote(key.dataset.keyNote));return}
  const pb=e.target.closest('[data-preset-bass]');if(pb){safePlay(()=>audio.playChord({bass:pb.dataset.presetBass,notes:['E3','A3','D4','G4','B4']}));return}
  const p11=e.target.closest('[data-preset-11]');if(p11){safePlay(()=>audio.playChord({bass:'F2',notes:['A3','E4',p11.dataset.preset11,'D4']}));return}
  const exportBtn=e.target.closest('[data-export]');if(exportBtn){const blob=new Blob([JSON.stringify({format:'after-parker-v1',savedAt:new Date().toISOString(),data:state},null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download='after-parker-progress.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('JSONを書き出しました');return}
- const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3};save();route();toast('端末内の学習履歴をリセットしました')}return}
+ const reset=e.target.closest('[data-reset]');if(reset){if(confirm('全レッスンの完了状況、メモ、耳トレの回答を削除しますか？')){state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5};save();route();toast('端末内の学習履歴をリセットしました')}return}
 });
 document.addEventListener('change',async e=>{
  if(e.target.id==='octave-selector'){state.startOctave=Number(e.target.value);save();renderKeyboard();return}
@@ -143,10 +160,14 @@ document.addEventListener('change',async e=>{
    try{const f=e.target.files?.[0];if(!f)return;if(f.size>1024*1024)throw new Error('ファイルが大きすぎます');const data=JSON.parse(await f.text());if(data.format!=='after-parker-v1'||typeof data.data!=='object'||data.data===null)throw new Error('未対応のJSON形式');
      const p=data.data;const ids=new Set(lessons.map(l=>l.id));const ears=new Set(earDrills.map(d=>d.id));
      state={completed:Object.fromEntries(Object.entries(p.completed||{}).filter(([k,v])=>ids.has(k)&&typeof v==='boolean')),notes:Object.fromEntries(Object.entries(p.notes||{}).filter(([k,v])=>ids.has(k)&&typeof v==='string').map(([k,v])=>[k,v.slice(0,50000)])),ear:Object.fromEntries(Object.entries(p.ear||{}).filter(([k,v])=>ears.has(k)&&['A','B'].includes(v))),pianoMode:['app','real'].includes(p.pianoMode)?p.pianoMode:'app',startOctave:[2,3,4].includes(p.startOctave)?p.startOctave:3,practiceSpeed:[.75,1,1.25].includes(p.practiceSpeed)?p.practiceSpeed:1,practiceDone:Object.fromEntries(Object.entries(p.practiceDone||{}).filter(([k,v])=>/^\d{2}:[012]$/.test(k)&&practicePlans[k.slice(0,2)]&&typeof v==='boolean'))};
+     state.studyEvents=Array.isArray(p.studyEvents)?p.studyEvents.filter(e=>e&&/^\d{4}-\d{2}-\d{2}$/.test(e.day)&&['lesson','practice','quiz','ear','session','review-recalled','review-again'].includes(e.kind)&&typeof e.id==='string'&&typeof e.at==='string').slice(-1200).map(e=>({day:e.day,kind:e.kind,id:e.id.slice(0,24),at:e.at.slice(0,40)})):[];
+     state.reviews=Object.fromEntries(Object.entries(p.reviews||{}).filter(([id,v])=>ids.has(id)&&v&&Number.isInteger(v.count)&&v.count>=0&&v.count<=5&&/^\d{4}-\d{2}-\d{2}$/.test(v.nextDue)&&/^\d{4}-\d{2}-\d{2}$/.test(v.last)).map(([id,v])=>[id,{count:v.count,last:v.last,nextDue:v.nextDue,attempts:Number.isInteger(v.attempts)?v.attempts:1}]));
+     state.weeklyTarget=[2,3,4,5,7].includes(p.weeklyTarget)?p.weeklyTarget:3;
+     state.homeMinutes=[5,15,25].includes(p.homeMinutes)?p.homeMinutes:5;
      for(const l of lessons){if([0,1,2].includes(p['quiz-'+l.id]))state['quiz-'+l.id]=p['quiz-'+l.id]}
      save();route();toast('復元できました');
    }catch(err){toast('復元できません：'+err.message)}
  }
 });
 document.addEventListener('input',e=>{if(e.target.id==='lesson-note'){state.notes[currentId]=e.target.value;save()}});
-if(!location.hash)location.hash='/lesson/01';route();
+if(!location.hash)location.hash='/home';route();

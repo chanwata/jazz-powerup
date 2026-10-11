@@ -56,3 +56,32 @@ test('long-form editorial readings cover every lesson with references and usable
    for(const [title,url] of r.refs)assert.ok(title&&/^https:\/\//.test(url),`${id} invalid source ${url}`);
  }
 });
+
+test('dashboard calculates recorded activities honestly and schedules spaced reviews',async()=>{
+ const {dashboardSnapshot,logLearning,recordReview,dayKey,shiftDay}=await import('../src/dashboard.js');
+ const {homeMarkup}=await import('../src/dashboard-view.js');
+ const now=new Date(2026,9,11,12);
+ const state={completed:{'03':true},practiceDone:{'03:0':true},ear:{e1:'B',e2:'A'},notes:{},studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5};
+ let s=dashboardSnapshot(state,lessons,earDrills,now);
+ assert.equal(s.completed,1);assert.equal(s.active,0);assert.equal(s.practice,1);assert.equal(s.earCorrect,1);
+ assert.equal(s.due[0].lesson.id,'03');
+ logLearning(state,'practice','03:0',new Date(2026,9,10,12));
+ logLearning(state,'ear','e1',now);
+ s=dashboardSnapshot(state,lessons,earDrills,now);
+ assert.equal(s.active,2);assert.equal(s.streak,2);assert.equal(s.totalEvents,2);
+ assert.equal(dayKey(now),'2026-10-11');
+ assert.equal(shiftDay('2026-12-31',1),'2027-01-01');
+ let review=recordReview(state,'03',true,now);
+ assert.equal(review.nextDue,'2026-10-12');
+ s=dashboardSnapshot(state,lessons,earDrills,now);
+ assert.equal(s.due.length,0);
+ const markup=homeMarkup(s,state,x=>String(x));
+ assert.match(markup,/SPACED RECALL/);
+ assert.match(markup,/学習のリズム/);
+ assert.match(markup,/#\/lesson\/01/);
+ review=recordReview(state,'03',true,new Date(2026,9,12,12));
+ assert.equal(review.nextDue,'2026-10-15');
+ review=recordReview(state,'03',false,new Date(2026,9,13,12));
+ assert.equal(review.nextDue,'2026-10-14');
+ assert.equal(review.count,0);
+});
