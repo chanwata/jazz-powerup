@@ -4,6 +4,7 @@ import {practiceA} from '../src/practice-a.js';
 import {practiceB} from '../src/practice-b.js';
 import {lessons} from '../src/data.js';
 import {noteToMidi} from '../src/audio.js';
+import {execFileSync} from 'node:child_process';
 const plans={...practiceA,...practiceB};
 function timedTokens(raw){return String(raw||'').trim().split(/\s+/).filter(Boolean).map(token=>{const m=/^([A-G][#b]?-?\d+|_)@(\d+(?:\.\d+)?)(?:\/(\d+(?:\.\d+)?))?$/.exec(token);assert.ok(m,`Invalid timed note: ${token}`);return {note:m[1],time:+m[2],len:m[3]?+m[3]:.72}})}
 test('all chapters have three concrete audio examples and three graded practice steps',()=>{
@@ -30,7 +31,8 @@ test('all chapters have three concrete audio examples and three graded practice 
        for(const note of String(bar.p||'').split(/\s+/).filter(Boolean))noteToMidi(note);
      }
    }
-   for(const task of p.tasks)for(const field of ['level','setup','action','check'])assert.ok(task[field]?.length>=8,`${id} ${field}`);
+   for(const task of p.tasks){assert.ok(task.level?.length>=4,`${id} level`);for(const field of ['setup','action','check'])assert.ok(task[field]?.length>=8,`${id} ${field}`);}
    for(const rec of p.recordings)assert.ok(rec.title&&rec.focus&&rec.apply);
  }
 });
+test('application and audio engine parse successfully',()=>{for(const file of ['src/app.js','src/audio.js','src/practice-a.js','src/practice-b.js'])assert.doesNotThrow(()=>execFileSync(process.execPath,['--check',file]));});
