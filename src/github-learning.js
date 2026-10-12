@@ -38,12 +38,38 @@ async function github(path,options={}){
    let message='';
    try{const body=await response.json();message=typeof body?.message==='string'?body.message:'';}catch{}
    const remaining=response.headers?.get?.('x-ratelimit-remaining')??null;
-   throw Error(explainGithubFailure(response.status,action,message,remaining));
+   const error=new Error(explainGithubFailure(response.status,action,message,remaining));
+   error.httpStatus=response.status;
+   throw error;
  }
  return response.json();
 }
+export async function tokenAccountLogin(){
+ if(!token)throw Error('まずGitHub Tokenを入力してください。');
+ let response;
+ try{response=await fetch('https://api.github.com/user',{headers:jsonHeaders(),credentials:'omit',redirect:'error',cache:'no-store'});}
+ catch{return null;}
+ if(!response.ok)return null;
+ try{
+  const profile=await response.json();
+  return typeof profile?.login==='string'&&/^[a-zA-Z0-9-]{1,39}$/.test(profile.login)?profile.login:null;
+ }catch{return null;}
+}
 export async function verifyPrivateRepo(){
- const repo=await github('',{});
+ let repo;
+ try{repo=await github('',{});}
+ catch(err){
+  if(err?.httpStatus===404){
+   const login=await tokenAccountLogin();
+   if(login&&login.toLowerCase()!=='chanwata'){
+    throw Error('Tokenの認証ユーザーは「'+login+'」です。保存先の所有者「chanwata」と違います。このTokenからは非公開リポジトリが見えません。GitHubでchanwataに切り替えてFine-grained Tokenを作成してください。Tokenの値は表示・保存しません。');
+   }
+   if(login){
+    throw Error('Tokenの認証ユーザーは「'+login+'」で正しいですが、jazz-powerup-memoryが参照できません。Fine-grained Tokenの設定でResource owner＝chanwata、Repository access＝Only select repositories → jazz-powerup-memoryを選び、Contents＝Read and writeを確認してください。');
+   }
+  }
+  throw err;
+ }
  if(repo.full_name!==MEMORY_REPO||repo.private!==true||repo.owner?.login!=='chanwata')throw Error('保存先はchanwata/jazz-powerup-memoryという非公開リポジトリに限ります。公開リポジトリには学習メモを送信しません。');
  verified=true;
  return true;

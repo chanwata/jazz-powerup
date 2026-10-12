@@ -56,3 +56,13 @@ GitHub Contents APIに準拠： `GET /repos/chanwata/jazz-powerup-memory`（priv
 - 自動同期の常駐処理は行わない。保存と読込ボタンは明示的な利用者操作。
 - 別端末から取り込む際の安全なマージは未実装。取り込む前にバックアップを確認する。
 - GitHub APIへのfetchとブラウザ環境でのPATによる実通信の動作は、非公開リポジトリ作成後にユーザー実機で検証する必要がある。
+
+## Token接続の404切り分け（2026-10-12）
+
+GitHubのプライベートリポジトリ取得API (`GET /repos/chanwata/jazz-powerup-memory`) は認可されないTokenに404を返すことがある。リポジトリ不存在とは限らない。サイトはこの404のときだけ、同じTokenでGitHub公式 `GET /user` を呼び、公開されているログイン名だけでアカウントの取り違えを診断する。Tokenの値、メールアドレス、プロフィールなどは表示・保存・GitHubへコミットしない。
+
+- 認証ユーザーが `chanwata` 以外：ブラウザで正しいGitHubアカウントに切り替え、そのアカウントからTokenを作る。
+- 認証ユーザーが `chanwata`：Fine-grained TokenのResource owner、Selected repositories、Contents Read and writeを再確認。
+- 認証ユーザーが取得できない：Token自体の有効性、期限、コピー時の混入文字などをチェック。
+
+`jazz-powerup-memory` は既にPrivateで作成され、`main` ブランチも存在している。404を回避するために公開設定を変更してはならない。

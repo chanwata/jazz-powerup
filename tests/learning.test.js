@@ -110,3 +110,32 @@ test('403 diagnostics distinguish missing selected repository, write grant and r
  assert.match(explainGithubFailure(403,'保存','API rate limit exceeded','0'),/利用制限/);
  assert.match(explainGithubFailure(409,'保存','Conflict'),/main/);
 });
+
+test('private repository 404 diagnoses whether token belongs to a different account',async()=>{
+ const oldFetch=globalThis.fetch;
+ const calls=[];
+ globalThis.fetch=async(url,options)=>{
+   calls.push({url,options});
+   if(url==='https://api.github.com/repos/chanwata/jazz-powerup-memory')return {ok:false,status:404,json:async()=>({message:'Not Found'}),headers:{get:()=>null}};
+   if(url==='https://api.github.com/user')return {ok:true,status:200,json:async()=>({login:'wyokota3'})};
+   throw new Error('Unexpected URL');
+ };
+ setGithubToken('github_pat_not_real');
+ try{
+   await assert.rejects(()=>verifyPrivateRepo(),/wyokota3.*chanwata/);
+   assert.equal(calls.length,2);
+   assert.ok(calls.every(x=>x.options.headers.Authorization==='Bearer github_pat_not_real'));
+   assert.equal(hasGithubToken(),false);
+ }finally{forgetGithubToken();globalThis.fetch=oldFetch;}
+});
+test('private repository 404 with correct login suggests selected repositories and contents rights',async()=>{
+ const oldFetch=globalThis.fetch;
+ globalThis.fetch=async url=>{
+   if(url==='https://api.github.com/repos/chanwata/jazz-powerup-memory')return {ok:false,status:404,json:async()=>({message:'Not Found'}),headers:{get:()=>null}};
+   if(url==='https://api.github.com/user')return {ok:true,status:200,json:async()=>({login:'chanwata'})};
+   throw new Error('Unexpected URL');
+ };
+ setGithubToken('github_pat_not_real');
+ try{await assert.rejects(()=>verifyPrivateRepo(),/Only select repositories.*jazz-powerup-memory/);}
+ finally{forgetGithubToken();globalThis.fetch=oldFetch;}
+});
