@@ -1,0 +1,119 @@
+
+/* Editorial course — one lesson, four clear surfaces, no nested disclosure labyrinth */
+.lesson-workspace{max-width:1080px;margin:auto;--atlas-ink:#20433e;--atlas-accent:#357c70}
+.lesson-workspace .hero{margin-bottom:20px;padding-bottom:24px}
+.lesson-workspace .hero h1{font-size:clamp(2rem,3.4vw,3.1rem);max-width:780px;margin-top:14px}
+.lesson-workspace .hero-sub{max-width:720px}
+.atlas-course-intent{display:flex;gap:7px;flex-wrap:wrap;margin-top:19px}
+.atlas-course-intent span{display:inline-flex;padding:6px 9px;border:1px solid #d9ddce;background:#f3f4eb;color:#477066;font-size:.68rem;border-radius:3px;font-weight:730}
+.atlas-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;position:sticky;z-index:8;top:75px;padding:10px 0;background:var(--paper);border-bottom:1px solid var(--line);margin-bottom:26px;scroll-margin-top:78px}
+.atlas-tabs button{border:1px solid transparent;border-bottom:3px solid transparent;padding:13px 8px 12px;background:transparent;font-size:.8rem;font-weight:730;color:#6f7e75;border-radius:3px 3px 0 0;min-width:0}
+.atlas-tabs button:hover{background:#e7eae0;color:var(--moss)}
+.atlas-tabs button[aria-selected="true"]{background:var(--cream);color:#17423d;border-bottom-color:#2c8272;font-weight:820}
+.atlas-panel[hidden]{display:none!important}
+.atlas-panel{max-width:1010px;margin:auto;padding-bottom:35px}
+.atlas-heading{padding:2px 0 24px;margin-bottom:29px;border-bottom:1px solid var(--line)}
+.atlas-heading .overline{color:var(--ochre)}
+.atlas-heading h2{font-size:clamp(1.45rem,2.6vw,2.1rem);line-height:1.35;font-weight:540;margin:12px 0}
+.atlas-heading>p{font-size:.88rem;line-height:1.9;color:#556b63;max-width:820px}
+.atlas-essential{font-weight:720!important;color:#254a42!important}
+.atlas-reading{max-width:870px}
+.atlas-reading #adaptive-panel{max-width:100%}
+.atlas-section{padding:0 0 30px;margin:0 0 39px;border-bottom:1px solid var(--line)}
+.atlas-section-head{margin-bottom:20px}
+.atlas-section-head .overline,.atlas-section>.overline{color:#987640}
+.atlas-section-head h2,.atlas-section>h2{font-size:clamp(1.3rem,2vw,1.75rem);font-weight:550;margin:9px 0}
+.atlas-section-head p{color:#6a7770;font-size:.82rem}
+.atlas-concepts{display:grid;gap:20px}
+.atlas-concept{display:grid;grid-template-columns:42px minmax(0,1fr);gap:14px}
+.atlas-concept-n{font:1.6rem Georgia,serif;color:#a58a60}
+.atlas-concept h3{font-size:1.05rem;font-weight:820;margin:5px 0 6px;color:#25443c}
+.atlas-concept p{font-size:.89rem;line-height:2.02;margin:0;color:#354940}
+.atlas-formulas{display:grid;gap:16px}
+.atlas-formula{background:#fbfaf6;border:1px solid #dcded3;border-left:3px solid #64998b;padding:19px 22px;border-radius:0 4px 4px 0}
+.atlas-formula-top{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.atlas-formula-top span{font-size:.66rem;letter-spacing:.08em;color:#9d8458;font-weight:730}
+.atlas-formula-top strong{font-size:.92rem;color:#254e45}
+.atlas-formula-notes{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;background:#e8eee5;padding:16px 15px;font-size:.83rem!important;line-height:1.9!important;margin:12px 0!important;color:#1e413a}
+.atlas-formula>p:last-child{font-size:.82rem;line-height:1.95;color:#465e54;margin:7px 0 0}
+.atlas-contrast{background:#f5f0e6;padding:25px;border:1px solid #e7ded0;border-left:3px solid #bc9254}
+.atlas-contrast p,.atlas-mini-lab p{font-size:.87rem;line-height:1.97}
+.atlas-mini-lab{background:#e9efe6;padding:26px;border-left:3px solid #2d7d70}
+.atlas-jump{display:inline-block;background:var(--moss);color:#fff;text-decoration:none;border:0;border-radius:3px;padding:12px 16px;margin:8px 0;font-weight:740;font-size:.77rem;cursor:pointer}
+.atlas-mini-lab .atlas-jump{margin-top:12px}
+.atlas-history p{font-size:.85rem;line-height:2.0;color:#42554e}
+.atlas-vocab{display:flex;gap:7px;flex-wrap:wrap;margin-top:15px}
+.atlas-vocab span{background:#e4e9df;border:1px solid #d2dbcf;border-radius:2px;padding:5px 9px;font-size:.68rem;color:#37695e}
+.atlas-recording-primary{max-width:950px;background:var(--cream);border:1px solid var(--line);padding:22px 26px;margin-bottom:28px;border-radius:4px}
+.atlas-recording-primary>h3{font-size:1.25rem;margin:10px 0 5px;font-weight:600}
+.atlas-recording-primary>p{font-size:.79rem;color:#65746e}
+.atlas-recording-primary .atlas-jump{margin:10px 0}
+.atlas-listening-map{padding:14px 0 0;margin:15px 0 0;border-top:1px solid var(--line);list-style:none;display:grid;gap:14px}
+.atlas-listening-map li{display:flex;gap:14px;font-size:.79rem;line-height:1.95}
+.atlas-listening-map li span{font:1.14rem Georgia,serif;color:#a3834e}
+.atlas-score-slot{min-height:140px;max-width:100%;overflow:hidden}
+.atlas-score-slot>.score-lab{max-width:100%;margin:0}
+.atlas-panel-practice .practice-workshop{max-width:940px}
+.atlas-practice-header{border-bottom:1px solid var(--line);margin-bottom:24px;padding-bottom:16px}
+.atlas-practice-header h2{font-size:1.7rem;font-weight:540}
+.atlas-practice-end{display:grid;grid-template-columns:1fr;gap:20px;max-width:880px;margin:27px 0}
+.atlas-practice-end .prose-section{padding:22px 23px;margin:0;background:var(--cream);border:1px solid var(--line);border-radius:4px}
+.atlas-practice-end .complete-button{margin-top:16px}
+.atlas-practice-end textarea{display:block;width:100%}
+.atlas-practice-end .quiz-options{max-width:100%}
+.atlas-lesson-next{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding:20px 0;font-size:.8rem}
+.atlas-lesson-next a{color:#2b6e60;text-decoration:none;font-weight:770}
+.atlas-people .atlas-heading{margin-bottom:22px}
+.knowledge-recall{background:#e9eee5;border:1px solid #cfded2;padding:23px 27px;margin-bottom:36px;max-width:870px}
+.knowledge-recall-title{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.atlas-pill{padding:5px 9px;border:1px solid #c3d6c9;background:#f6f9f2;color:#407164;font-size:.68rem;border-radius:3px}
+.knowledge-recall h3{font-size:1.1rem;font-weight:800;margin:13px 0}
+.knowledge-prompt{font-size:.89rem;line-height:2;padding:17px 0;border-top:1px solid #d4ddd3;border-bottom:1px solid #d4ddd3}
+.knowledge-reveal-button,.knowledge-grade button{padding:12px 17px;background:#16463f;color:white;border:0;border-radius:3px;font-weight:770;font-size:.78rem}
+.knowledge-grade{display:flex;gap:9px;flex-wrap:wrap}
+.knowledge-grade .quiet{background:#f4f6f0;color:#22564a;border:1px solid #c8dbd0}
+.knowledge-reveal{background:#fff;padding:16px 18px;margin:14px 0;border-left:3px solid #b59355}
+.knowledge-reveal span{font-size:.65rem;color:#997a43}
+.knowledge-reveal h3{font-size:1.2rem;margin:8px 0}
+.knowledge-reveal p{font-size:.8rem;line-height:1.8}
+.knowledge-recall>small{font-size:.7rem;line-height:1.7;color:#5d736a;display:block;margin-top:16px}
+.atlas-person-list{display:grid;gap:10px;max-width:930px}
+.atlas-person{display:grid;grid-template-columns:38px minmax(0,1fr);gap:18px;padding:21px 25px;background:var(--cream);border:1px solid #dcdfd4}
+.atlas-person-index{font:1.5rem Georgia,serif;color:#a38b66}
+.atlas-person h3{font-size:1.17rem;margin:0 0 5px;font-weight:740}
+.atlas-meta{font-size:.73rem;color:#60756c;font-weight:740}
+.atlas-person p{font-size:.81rem;line-height:1.9;margin:9px 0 0}
+.atlas-ear-note{color:#375d54}
+.atlas-albums{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.atlas-album{border:1px solid #dcdacf;background:#faf9f3;border-radius:3px;padding:22px 20px;display:flex;flex-direction:column;align-items:flex-start}
+.atlas-album-top{width:100%;display:flex;justify-content:space-between;align-items:center;padding-bottom:11px;border-bottom:1px solid #e5e3d9}
+.atlas-album-number{font:1.15rem Georgia,serif;color:#a58b65}
+.atlas-year{font-size:.7rem;color:#587269;background:#e6ece4;padding:4px 7px;border-radius:2px}
+.atlas-album h3{font-family:Georgia,'Yu Mincho',serif;font-weight:600;font-size:1.25rem;margin:14px 0 5px;line-height:1.45}
+.atlas-album p{font-size:.79rem;line-height:1.9;margin:10px 0 0}
+.atlas-lineup{color:#50685c}
+.atlas-memory-hook{background:#f0eee3;padding:11px 13px;width:100%;margin-top:18px!important}
+.atlas-album-link{display:inline-flex;margin-top:auto;padding-top:20px;color:#28685e;font-size:.79rem;font-weight:740;text-decoration:none}
+.atlas-source-section>a{display:inline-block;color:#266c60;margin:8px 20px 0 0;font-size:.77rem;font-weight:740}
+.atlas-archive{max-width:1110px;margin:auto}
+.archive-controls{display:flex;flex-wrap:wrap;gap:16px;align-items:end;justify-content:space-between;background:#f8f8f1;border:1px solid var(--line);padding:17px 22px;margin-bottom:14px}
+.archive-switch{display:flex;gap:5px}
+.archive-switch button{padding:11px 13px;background:#e9eee5;border:1px solid #d1ddd2;border-radius:3px;font-weight:770;font-size:.77rem}
+.archive-switch button.active{color:white;background:var(--moss)}
+.archive-search{display:flex;flex-direction:column;gap:4px;min-width:200px;max-width:400px;flex:1}
+.archive-search span{color:#6d7a6e;font-size:.67rem;font-weight:770}
+.archive-search input{width:100%;padding:10px 12px;border:1px solid #cbd7cb;border-radius:3px;background:#fff;font-size:.83rem}
+.archive-count{font-size:.72rem;color:#6c7b72;margin:15px 0}
+.archive-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.archive-result{background:#faf9f4;border:1px solid #e0dfd2;display:flex;flex-direction:column;text-decoration:none;gap:7px;padding:16px 18px;min-width:0}
+.archive-result:hover{background:#ecf2e9;border-color:#b5cfbb}
+.archive-index{font-size:.68rem;color:#a07b42;font-weight:760}
+.archive-result strong{font-size:.99rem;line-height:1.45;font-weight:770}
+.archive-result small{font-size:.72rem;line-height:1.6;color:#61746a}
+.archive-open{font-size:.68rem;color:#2b7568;font-weight:760;margin-top:auto}
+.archive-footer{border-top:1px solid var(--line);margin-top:35px;padding-top:25px}
+.archive-footer h2{font-size:1.25rem}
+.archive-footer p{font-size:.8rem}
+.archive-footer .backup-actions>a{display:inline-block;padding:10px;color:#2f6e64;text-decoration:none}
+@media(max-width:850px){.atlas-tabs{top:0}.atlas-albums,.archive-results{grid-template-columns:1fr}.lesson-workspace .hero{margin-bottom:10px}.atlas-concept p{line-height:1.9}}
+@media(max-width:560px){.atlas-tabs{gap:1px;padding:5px 0 8px}.atlas-tabs button{padding:12px 4px 10px;font-size:.68rem;line-height:1.55;min-height:56px}.atlas-heading h2{font-size:1.52rem}.atlas-concept{grid-template-columns:29px 1fr;gap:8px}.atlas-concept-n{font-size:1.17rem}.atlas-formula{padding:13px 12px}.atlas-formula-notes{font-size:.74rem!important}.atlas-person{padding:18px 13px;grid-template-columns:24px 1fr;gap:8px}.atlas-album{padding:17px}.atlas-recording-primary{padding:17px}.knowledge-recall{padding:17px}.archive-controls{padding:12px}.archive-switch{width:100%}.archive-switch button{flex:1}.archive-search{width:100%;max-width:none}.atlas-practice-end .prose-section{padding:18px 14px}}
