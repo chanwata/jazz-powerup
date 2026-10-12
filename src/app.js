@@ -10,6 +10,8 @@ import {dashboardSnapshot,logLearning,recordReview} from './dashboard.js';
 import {homeMarkup} from './dashboard-view.js';
 import {renderAdaptiveLesson} from './learning-model.js';
 import {renderJournalPage} from './journal-ui.js';
+import {theoryMarkup,listeningMarkup,knowledgePanelMarkup,archiveResultsMarkup,archivePageMarkup} from './atlas-ui.js';
+import {gradeKnowledgeCard,nextRecallCard,recallStats} from './knowledge-memory.js';
 import {verifyPrivateRepo,setGithubToken,forgetGithubToken,saveLearningToGitHub,readLearningFromGitHub,readTutorFromGitHub,acceptRemoteSync,MENTOR_PROMPT,normalizeLearningState} from './github-learning.js';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -19,6 +21,7 @@ let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMod
 const audio=new StudyAudio();
 window.addEventListener('score-audio-start',()=>audio.stop());
 let journalError='';let currentView='home';let currentId='01';let selectedEarId=earDrills[0].id;let homeReveal=false;
+let currentLessonTab='theory', recallRevealed=false,archiveKind='albums',archiveQuery='';
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){console.warn('Storage unavailable',e)}}
 function progressUpdate(){const done=lessons.filter(l=>state.completed[l.id]).length;const percent=Math.round(done/lessons.length*100);$('progress-summary').textContent=`${done} / ${lessons.length} 完了`;$('progress-percent').textContent=`${percent}%`;$('progress-bar').style.width=percent+'%';}
 function urlFor(l){return `https://www.youtube.com/results?search_query=${encodeURIComponent(l.query)}`;}
@@ -62,26 +65,23 @@ function renderJournal(){
 }
 function renderLesson(){
  const l=lessons.find(x=>x.id===currentId)||lessons[0];currentId=l.id;
- const i=lessons.indexOf(l),prev=lessons[i-1],next=lessons[i+1];
- const ex=l.examples.map((e,j)=>`<div class="sound-example"><div class="sound-copy"><span class="number-label">STUDY ${String(j+1).padStart(2,'0')}</span><strong>${esc(e.label)}</strong><p>${esc(e.description)}</p>${state.pianoMode==='real'?`<p class="piano-notes">実機演奏：${esc(formatSpec(e))}</p>`:''}</div><button class="play-button" data-play="${l.id}:${j}"><span aria-hidden="true">▶</span> 音を鳴らす</button></div>`).join('');
- const sources=[...l.sources,...(deepReading[l.id]?.refs||[])].map(([name,url])=>`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(name)} ↗</a>`).join('');
+ const i=lessons.indexOf(l),prev=lessons[i-1],next=lessons[i+1],deep=deepReading[l.id];
+ const tabs=[['theory','01 理論'],['score','02 譜例・音'],['people','03 人と名盤'],['practice','04 演奏・メモ']];
+ const tabBar=tabs.map(([id,title])=>`<button type="button" role="tab" id="lesson-tab-${id}" data-lesson-tab="${id}" aria-controls="lesson-panel-${id}" aria-selected="${currentLessonTab===id}" tabindex="${currentLessonTab===id?'0':'-1'}">${title}</button>`).join('');
+ const panels=(id,contents)=>`<section id="lesson-panel-${id}" class="atlas-panel atlas-panel-${id}" data-lesson-panel="${id}" role="tabpanel" aria-labelledby="lesson-tab-${id}" ${currentLessonTab===id?'':'hidden'}>${contents}</section>`;
+ const note=typeof state.notes?.[l.id]==='string'?state.notes[l.id]:'';
  const checked=!!state.completed[l.id];
- $('app').innerHTML=`
- <div class="hero"><div class="hero-top"><span class="overline">LESSON ${l.id} / ${String(lessons.length).padStart(2,'0')} · ${esc(l.priority)}</span><div class="hero-chips">${tags(l)}</div></div><h1>${esc(l.title)}</h1><p class="hero-sub">${esc(l.subtitle)}</p><p class="hero-intro">${esc(l.premise)}</p></div>
- <div class="lesson-grid"><div class="article">
- ${renderAdaptiveLesson(l,state,esc)}
- ${sections('01 — 背景とジャズ史',l.history)}
- ${sections('02 — 理論を耳に結びつける',l.theory)}
- ${deeperSections(l)}
- <section class="prose-section listen-section"><div class="section-label">06 — この録音を聴く</div><h2>${esc(l.album)}</h2><p class="artist">${esc(l.artist)}</p>${l.videoId?`<div class="verified-video"><button class="recording-link" data-embed-video="${l.videoId}" aria-label="${esc(l.album)} の公式YouTube録音をページ内で再生">▷ このページで公式録音を再生</button><div id="embedded-video" class="embedded-video"></div></div>`:""}<a class="recording-alt" href="${esc(urlFor(l))}" target="_blank" rel="noopener noreferrer">YouTubeで対象録音を探す ↗</a><p class="micro">${l.videoId?"確認済みの公式アーティストチャンネルの音源を使用。埋め込みが制限される場合は外部検索から。":"対象録音に対応した検索結果を新しいタブで開きます。権利者の音源が見つかった場合はそちらで聴いてください。"}</p><ol class="listening-points">${toHtmlList(l.listen)}</ol>${deepListen(l)}</section>
-
-
- ${practicePanel(l)}
- <section class="prose-section"><div class="section-label">11 — ちょっとした話</div><p class="insider">${esc(l.insider)}</p>${deepAside(l)}</section>
- <section class="prose-section"><div class="section-label">12 — 知識の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((o,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(o)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'別の角度で考えてみよう。')+' '+esc(l.quiz.why)}</div></section>
- <section class="prose-section"><div class="section-label">13 — 自分のメモ</div><textarea id="lesson-note" rows="5" placeholder="耳に残った音、試した運指、引っかかった理論……">${esc(state.notes[l.id]||'')}</textarea><p class="micro">この端末に自動保存。メモに合わせてページ冒頭の「個別練習」が切り替わります。<a href="#/journal">GitHubに同期 ↗</a></p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>
- <div class="next-row">${prev?`<a href="#/lesson/${prev.id}">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a href="#/lesson/${next.id}">${esc(next.title)} →</a>`:'<a href="#/ear">耳トレに進む →</a>'}</div>
- </div><aside class="context-panel"><div class="context-card"><span class="overline">IN THIS SESSION</span><h3>今日の聴き方</h3><p>まず録音を聴く。次に短い教材音を再生。最後にベースかピアノで「音が違って聴こえる理由」を検証する。</p><div class="divider"></div><strong>基準は知識でなく耳</strong><p>理論上は同じスケールでも、下に置く音や発音タイミングで印象が変わる。</p></div><div class="context-card"><span class="overline">SOURCE NOTES</span><div class="source-list">${sources}</div><p class="micro">録音年・音楽家・制作情報は一次情報との照合を推奨。参考リンクは各権利者・組織の公開資料。</p></div></aside></div>`;
+ const quiz=`<section class="prose-section"><div class="section-label">RETRIEVAL / 理論の確認</div><h2>${esc(l.quiz.q)}</h2><div class="quiz-options">${l.quiz.options.map((x,j)=>`<button class="quiz-option" data-lesson-answer="${j}" ${state['quiz-'+l.id]!==undefined?'disabled':''}>${String.fromCharCode(65+j)}. ${esc(x)}</button>`).join('')}</div><div id="quiz-feedback" class="feedback ${state['quiz-'+l.id]===undefined?'hidden':''}">${state['quiz-'+l.id]===undefined?'':(state['quiz-'+l.id]===l.quiz.answer?'✓ 正解。':'もう一度考えよう。')+' '+esc(l.quiz.why)}</div></section>`;
+ const notes=`<section class="prose-section"><div class="section-label">LEARNING MEMORY / 自分の発見</div><h2>聴こえたことを言語化する。</h2><textarea id="lesson-note" rows="6" placeholder="音程・コード名・小節の位置・実際に弾いたことを書こう">${esc(note)}</textarea><p class="micro">この端末に自動保存。メモは理論タブの個別説明にも反映。非公開GitHubの同期は<a href="#/journal">学習ログ ↗</a>から。</p><button class="complete-button ${checked?'done':''}" data-complete="${l.id}">${checked?'✓ 完了済み — 未完了に戻す':'このレッスンを完了にする →'}</button></section>`;
+ const previousNext=`<nav class="atlas-lesson-next" aria-label="次のレッスン">${prev?`<a href="#/lesson/${prev.id}/theory">← ${esc(prev.title)}</a>`:'<span></span>'}${next?`<a href="#/lesson/${next.id}/theory">${esc(next.title)} →</a>`:'<a href="#/ear">耳トレへ →</a>'}</nav>`;
+ $('app').innerHTML=`<div class="lesson-workspace">
+  <header class="hero"><div class="hero-top"><span class="overline">LESSON ${l.id} / ${lessons.length} · ${esc(l.priority)}</span><div class="hero-chips">${tags(l)}</div></div><h1>${esc(l.title)}</h1><p class="hero-sub">${esc(l.subtitle)}</p><div class="atlas-course-intent"><span>理論：${esc(l.tag)}</span><span>人物4名</span><span>名盤4枚</span><span>譜例あり</span><span>練習3段階</span></div></header>
+  <nav class="atlas-tabs" role="tablist" aria-label="レッスンを4つのステップで学ぶ">${tabBar}</nav>
+  ${panels('theory',theoryMarkup(l,deep,renderAdaptiveLesson(l,state,esc),esc))}
+  ${panels('score',listeningMarkup(l,deep,esc))}
+  ${panels('people',knowledgePanelMarkup(l,state,esc,recallRevealed))}
+  ${panels('practice',`<div class="atlas-practice-header"><span class="overline">PLAY / APPLY / REFLECT</span><h2>ベースで使える知識に変える。</h2><p>譜例の音を確かめてから、実機で再現・変奏・録音する。完成を急ぐ必要はない。</p></div>${practicePanel(l)}<div class="atlas-practice-end">${quiz}${notes}</div>${previousNext}`)}
+ </div>`;
  const prior=state['quiz-'+l.id];if(prior!==undefined)markQuiz(l,prior);
  document.title=`${l.title} — AFTER PARKER`;
 }
@@ -116,14 +116,13 @@ function renderKeyboard(){
  document.title='鍵盤 — AFTER PARKER';
 }
 function renderIndex(){
- const glossary=[['Guide tones','コードの3度と7度など、和声機能を明示しやすい音。'],['Upper structure','ベースや基本和音の上側で響く構造。上部構造三和音はその特殊な場合。'],['Avoid note','安定した保持音としては扱いに注意が必要な音。絶対的な禁則ではない。'],['Lydian','メジャースケールの4度が#4になったモード。#11はその特徴音。'],['Cross-rhythm','共通の基準パルスに対する異なる周期やアクセントの関係。'],['Microtiming','基準となるグリッドからの発音位置の小さな偏差。'],['Modal jazz','固定的なコードチェンジよりモードや調性領域を土台とする即興。'],['Harmolodics','オーネット・コールマンの音楽思想。旋律・和声・リズムの関係を再考する。'],['M-Base','構造化された即興を通じた創造的実践の総称。変拍子のジャンル名ではない。'],['Tumbao','アフロ・キューバン音楽で用いられる反復的なリズムパターン。ベースの先取りも重要。']];
- const achieved=lessons.filter(l=>state.completed[l.id]).length;
- $('app').innerHTML=`<div class="hero compact"><span class="overline">INDEX / REFERENCE / BACKUP</span><h1>人・年・概念から横断する。</h1><p class="hero-intro">年代順に眺めると、発展は一本道でないことが見えてくる。教材の進捗とメモは自分の端末に保存。</p></div><section class="prose-section"><div class="section-label">COURSE INDEX</div><div class="index-grid">${lessons.map(l=>`<a class="index-card" href="#/lesson/${l.id}"><span class="overline">${l.era} · ${l.tag}</span><strong>${l.id} ${esc(l.title)}</strong><small>${esc(l.artist)}</small></a>`).join('')}</div></section><section class="prose-section"><div class="section-label">GLOSSARY / TERMS</div><div class="glossary">${glossary.map(([word,def])=>`<div><strong>${esc(word)}</strong><p>${esc(def)}</p></div>`).join('')}</div></section><section class="prose-section"><div class="section-label">PROGRESS & BACKUP</div><h2>${achieved} / ${lessons.length} レッスン完了</h2><p>端末を変える場合はJSONのバックアップも使えます。GitHubとの明示的な同期は「学習ログ」ページで設定できます。<a href="#/journal">GitHubで学習メモを同期 ↗</a></p><div class="backup-actions"><button class="plain-button" data-export>進捗・メモをJSON保存</button><label class="file-button">JSONを読み込んで復元<input id="import-progress" type="file" accept=".json,application/json" hidden></label><button class="plain-button danger" data-reset>すべてリセット</button></div></section>`;
- document.title='索引 — AFTER PARKER';
+ const complete=lessons.filter(l=>state.completed[l.id]).length;
+ $('app').innerHTML=archivePageMarkup(archiveKind,archiveQuery,esc,complete);
+ document.title='人物・名盤事典 — AFTER PARKER';
 }
 function route(){
  const parts=location.hash.replace(/^#\/?/,'').split('/');currentView=['home','lesson','ear','keyboard','index','journal'].includes(parts[0])?parts[0]:'home';
- if(currentView==='lesson')currentId=lessons.some(l=>l.id===parts[1])?parts[1]:'01';
+ if(currentView==='lesson'){currentId=lessons.some(l=>l.id===parts[1])?parts[1]:'01';currentLessonTab=['theory','score','people','practice'].includes(parts[2])?parts[2]:'theory';recallRevealed=false;}
  homeReveal=false;
  audio.stop();
  document.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view===currentView));
@@ -136,6 +135,10 @@ $('lesson-search').addEventListener('input',renderMenu);
 window.addEventListener('hashchange',route);
 document.addEventListener('click',async e=>{
  const nav=e.target.closest('[data-view]');if(nav){location.hash=`/${nav.dataset.view}`;if(nav.dataset.view==='home'&&currentView==='home')renderHome();return}
+ const lessonTab=e.target.closest('[data-lesson-tab]');if(lessonTab){const kind=lessonTab.dataset.lessonTab;if(['theory','score','people','practice'].includes(kind)){const dest='#/lesson/'+currentId+'/'+kind;if(location.hash!==dest)location.hash=dest;else{currentLessonTab=kind;renderLesson();}return;}}
+ const recallShow=e.target.closest('[data-knowledge-reveal]');if(recallShow){if(nextRecallCard(state,currentId)?.id!==recallShow.dataset.knowledgeReveal)return;recallRevealed=true;const node=$('lesson-panel-people');if(node)node.innerHTML=knowledgePanelMarkup(lessons.find(l=>l.id===currentId),state,esc,true);return;}
+ const recallMark=e.target.closest('[data-knowledge-grade]');if(recallMark){const [id,result]=recallMark.dataset.knowledgeGrade.split(':');if(!recallRevealed||nextRecallCard(state,currentId)?.id!==id)return;gradeKnowledgeCard(state,id,result==='yes');logLearning(state,'catalog',id);save();recallRevealed=false;const node=$('lesson-panel-people');if(node)node.innerHTML=knowledgePanelMarkup(lessons.find(l=>l.id===currentId),state,esc,false);toast(result==='yes'?'覚えられた！ 次のカードへ。':'また明日、同じカードで試そう。');return;}
+ const archiveMode=e.target.closest('[data-archive-kind]');if(archiveMode){archiveKind=archiveMode.dataset.archiveKind==='people'?'people':'albums';renderIndex();return;}
  const minutes=e.target.closest('[data-home-minutes]');if(minutes){state.homeMinutes=Number(minutes.dataset.homeMinutes);save();renderHome();return}
  const weekly=e.target.closest('[data-home-weekly]');if(weekly){state.weeklyTarget=Number(weekly.dataset.homeWeekly);save();renderHome();return}
  const session=e.target.closest('[data-home-session-done]');if(session){logLearning(state,'session',String(state.homeMinutes||5));save();renderHome();toast('今日の練習を記録したよ。次は音を聴いて確かめよう。');return}
@@ -223,7 +226,8 @@ document.addEventListener('change',async e=>{
    }catch(err){toast('復元できません：'+err.message)}
  }
 });
-document.addEventListener('input',e=>{if(e.target.id==='lesson-note'){
+document.addEventListener('input',e=>{
+ if(e.target.id==='archive-search'){archiveQuery=e.target.value;const box=$('archive-items');if(box)box.innerHTML=archiveResultsMarkup(archiveKind,archiveQuery,esc);return;}if(e.target.id==='lesson-note'){
  state.notes[currentId]=e.target.value;save();
  const lesson=lessons.find(l=>l.id===currentId),panel=$('adaptive-panel');
  if(lesson&&panel)panel.outerHTML=renderAdaptiveLesson(lesson,state,esc);

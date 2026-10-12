@@ -51,8 +51,8 @@ export function archiveResultsMarkup(kind,query,esc){
  const items=Object.entries(catalog).flatMap(([id,ch])=>kind==='people'?ch.people.map(x=>({id,item:x,kind:'person'})):ch.albums.map(x=>({id,item:x,kind:'album'})));
  const filtered=items.filter(({id,item})=>(id+' '+Object.values(item).join(' ')).toLowerCase().includes(q));
  const results=filtered.map(({id,item,kind})=>kind==='person'?
- `<a href="#/lesson/${id}?people" class="archive-result"><span class="archive-index">${id} / PLAYER</span><strong>${esc(item.name)}</strong><small>${esc(item.role)} — ${esc(item.identity)}</small><span class="archive-open">第${id}章へ ↗</span></a>`:
- `<a href="#/lesson/${id}?people" class="archive-result"><span class="archive-index">${esc(item.year)} · ${esc(item.label)}</span><strong>${esc(item.title)}</strong><small>${esc(item.leader)} — ${esc(item.memory)}</small><span class="archive-open">第${id}章へ ↗</span></a>`).join('');
+ `<a href="#/lesson/${id}/people" class="archive-result"><span class="archive-index">${id} / PLAYER</span><strong>${esc(item.name)}</strong><small>${esc(item.role)} — ${esc(item.identity)}</small><span class="archive-open">第${id}章へ ↗</span></a>`:
+ `<a href="#/lesson/${id}/people" class="archive-result"><span class="archive-index">${esc(item.year)} · ${esc(item.label)}</span><strong>${esc(item.title)}</strong><small>${esc(item.leader)} — ${esc(item.memory)}</small><span class="archive-open">第${id}章へ ↗</span></a>`).join('');
  return `<p class="archive-count">${filtered.length}件 / ${items.length}件表示。名前・レーベル・年・楽器・参加者から検索。</p><div class="archive-results">${results||'<p>該当する人物・アルバムはありません。</p>'}</div>`;
 }
 

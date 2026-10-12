@@ -28,7 +28,7 @@ function mount(){
  if(parts[0]!=='lesson'){player.stop();return;}
  const id=scoreBook[parts[1]]?parts[1]:'01',hero=app.querySelector('.hero');
  if(!hero||app.querySelector('#score-lab'))return;
- const holder=document.createElement('div');holder.innerHTML=markup(scoreBook[id]);hero.after(holder.firstElementChild);
+ const holder=document.createElement('div');holder.innerHTML=markup(scoreBook[id]);const target=app.querySelector('#score-slot');if(target)target.replaceChildren(holder.firstElementChild);else hero.after(holder.firstElementChild);
 }
 player.onTick=info=>{
  if(!currentCard)return;

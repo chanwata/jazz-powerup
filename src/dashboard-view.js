@@ -26,7 +26,7 @@ export function homeMarkup(s,state,esc,reveal=false){
  <section class="dash-hero">
   <div class="overline">AFTER PARKER / YOUR PRACTICE SPACE</div>
   <div class="dash-hero-layout"><div><p class="dash-intro">JAZZ IS A PRACTICE</p><h1>${esc(headline)}</h1><p>読むだけじゃない。聴き分けて、思い出して、ベースで試す。今日の小さな発見が、明日の音を変える。</p>
-  <div class="dash-hero-actions"><a class="dash-main-link" href="#/lesson/${lesson.id}">今日のレッスンへ <span aria-hidden="true">↗</span></a><a class="dash-second-link" href="#/ear">耳トレで始める →</a><a class="dash-second-link" href="#/journal">学習ログ・個別化 ↗</a></div></div>
+  <div class="dash-hero-actions"><a class="dash-main-link" href="#/lesson/${lesson.id}">今日のレッスンへ <span aria-hidden="true">↗</span></a><a class="dash-second-link" href="#/ear">耳トレで始める →</a><a class="dash-second-link" href="#/journal">学習ログ・個別化 ↗</a><a class="dash-second-link" href="#/index">名盤・人物辞典 ↗</a></div></div>
   <div class="dash-donut" style="--progress:${ratio}%"><div><strong>${ratio}<small>%</small></strong><span>LESSONS COMPLETE</span></div></div></div>
  </section>
  <section class="dash-stats" aria-label="学習の実績">
