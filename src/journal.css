@@ -71,3 +71,5 @@
 .journal-difference p{font-size:.8rem;line-height:1.85}
 @media(max-width:760px){.top-nav{grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}.top-nav .nav-btn{font-size:.62rem;white-space:nowrap;padding:10px 1px}.al-main{grid-template-columns:1fr}.journal-pipeline{grid-template-columns:repeat(2,1fr)}.journal-sync-panel{grid-template-columns:1fr}.journal-sync-actions{display:flex;flex-wrap:wrap}.journal-sync-actions button{flex:1 1 210px}.journal-page .hero h1{font-size:1.8rem}.adaptive-lesson{padding:19px 16px}}
 @media(max-width:380px){.top-nav .nav-btn{font-size:.58rem}}
+
+.journal-api-error{white-space:pre-wrap;overflow-wrap:anywhere;border-left:3px solid #ad5140;padding:13px 16px;background:rgba(173,81,64,.055);color:#7a382d!important;font-weight:650;line-height:1.8}

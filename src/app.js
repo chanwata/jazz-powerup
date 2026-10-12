@@ -18,7 +18,7 @@ function load(){try{const p=JSON.parse(localStorage.getItem(STORE));if(p && type
 let state={completed:{},notes:{},ear:{},practiceDone:{},practiceSpeed:1,pianoMode:'app',startOctave:3,studyEvents:[],reviews:{},weeklyTarget:3,homeMinutes:5,reflections:{},mentorFeedback:{},...load()};
 const audio=new StudyAudio();
 window.addEventListener('score-audio-start',()=>audio.stop());
-let currentView='home';let currentId='01';let selectedEarId=earDrills[0].id;let homeReveal=false;
+let journalError='';let currentView='home';let currentId='01';let selectedEarId=earDrills[0].id;let homeReveal=false;
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state))}catch(e){console.warn('Storage unavailable',e)}}
 function progressUpdate(){const done=lessons.filter(l=>state.completed[l.id]).length;const percent=Math.round(done/lessons.length*100);$('progress-summary').textContent=`${done} / ${lessons.length} 完了`;$('progress-percent').textContent=`${percent}%`;$('progress-bar').style.width=percent+'%';}
 function urlFor(l){return `https://www.youtube.com/results?search_query=${encodeURIComponent(l.query)}`;}
@@ -57,6 +57,7 @@ function renderHome(){
 }
 function renderJournal(){
  $('app').innerHTML=renderJournalPage(state,lessons,esc);
+ if(journalError){const status=$('journal-status');if(status){status.textContent=journalError;status.classList.add('journal-api-error');}}
  document.title='GitHub学習ログ — AFTER PARKER';
 }
 function renderLesson(){
@@ -156,15 +157,15 @@ document.addEventListener('click',async e=>{
    if(!credential){toast('GitHub Tokenを入力してください。');return;}
    setGithubToken(credential);if($('journal-token'))$('journal-token').value='';
    connect.disabled=true;
-   try{await verifyPrivateRepo();renderJournal();toast('非公開リポジトリへの接続を確認しました。');}
-   catch(err){forgetGithubToken();renderJournal();toast(err.message);}
+   try{await verifyPrivateRepo();journalError='';renderJournal();toast('非公開リポジトリへの接続を確認しました。');}
+   catch(err){journalError=err.message;forgetGithubToken();renderJournal();toast('接続エラー。学習ログに原因を表示しました。');}
    return;
  }
- if(e.target.closest('[data-journal-disconnect]')){forgetGithubToken();renderJournal();toast('このタブのGitHub接続を解除しました。');return;}
+ if(e.target.closest('[data-journal-disconnect]')){forgetGithubToken();journalError='';renderJournal();toast('このタブのGitHub接続を解除しました。');return;}
  const push=e.target.closest('[data-journal-push]');if(push){
    push.disabled=true;
-   try{const result=await saveLearningToGitHub(state,lessons,earDrills);renderJournal();toast('非公開GitHubに学習履歴を保存しました。');}
-   catch(err){push.disabled=false;toast(err.message);}return;
+   try{await saveLearningToGitHub(state,lessons,earDrills);journalError='';renderJournal();toast('非公開GitHubに学習履歴を保存しました。');}
+   catch(err){journalError=err.message;renderJournal();toast('保存エラー。学習ログに原因を表示しました。');}return;
  }
  const pull=e.target.closest('[data-journal-pull]');if(pull){
    pull.disabled=true;
@@ -176,7 +177,7 @@ document.addEventListener('click',async e=>{
      const backup=new Blob([previous],{type:'application/json'}),url=URL.createObjectURL(backup),link=document.createElement('a');
      link.href=url;link.download='jazz-before-github-import.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
      state=remote.data;save();acceptRemoteSync(remote.sha);location.reload();
-   }catch(err){pull.disabled=false;toast(err.message);}return;
+   }catch(err){journalError=err.message;renderJournal();toast('読み込みエラー。学習ログに原因を表示しました。');}return;
  }
  if(e.target.closest('[data-journal-mentor]')){
    try{const data=await readTutorFromGitHub(lessons);state.mentorFeedback=data;save();renderJournal();toast('講師コメントを'+Object.keys(data).length+'件取り込みました。');}

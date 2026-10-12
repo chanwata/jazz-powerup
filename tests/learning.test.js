@@ -94,3 +94,19 @@ test('journal page presents current notes without requiring a GitHub connection'
  assert.match(html,/GitHubに保存/);
  assert.doesNotMatch(html,/github_pat_[A-Za-z0-9]{12}/);
 });
+
+test('browser GitHub requests omit API version header to avoid browser preflight incompatibility',async()=>{
+ const prev=globalThis.fetch;
+ const calls=[];
+ globalThis.fetch=async (url,opts)=>{calls.push(opts.headers);return {ok:true,status:200,json:async()=>({full_name:'chanwata/jazz-powerup-memory',private:true,owner:{login:'chanwata'}})};};
+ setGithubToken('github_pat_test_only');
+ try{assert.equal(await verifyPrivateRepo(),true);assert.equal(calls.length,1);assert.equal(calls[0]['X-GitHub-Api-Version'],undefined);assert.ok(calls[0].Authorization.startsWith('Bearer '));}
+ finally{forgetGithubToken();globalThis.fetch=prev;}
+});
+test('403 diagnostics distinguish missing selected repository, write grant and rate limits',async()=>{
+ const {explainGithubFailure}=await import('../src/github-learning.js');
+ assert.match(explainGithubFailure(403,'接続','Resource not accessible by personal access token'),/Selected repositories/);
+ assert.match(explainGithubFailure(403,'保存','Resource not accessible by personal access token'),/Read and write/);
+ assert.match(explainGithubFailure(403,'保存','API rate limit exceeded','0'),/利用制限/);
+ assert.match(explainGithubFailure(409,'保存','Conflict'),/main/);
+});
