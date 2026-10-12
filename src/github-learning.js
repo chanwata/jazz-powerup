@@ -6,7 +6,21 @@ const SHA_KEY='jazz-powerup-memory-synced-sha';
 const REPO_URL='https://api.github.com/repos/'+MEMORY_REPO;
 let token='';
 let verified=false;
-const jsonHeaders=()=>({'Accept':'application/vnd.github+json','Authorization':'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28'});
+const jsonHeaders=()=>({'Accept':'application/vnd.github+json','Authorization':'Bearer '+token});
+export function explainGithubFailure(status,action,message='',remaining=null){
+ const detail=String(message||'').slice(0,160);
+ if((status===403||status===429)&&(remaining==='0'||/rate limit/i.test(detail)))return `GitHub APIの利用制限です（HTTP ${status}）。少し時間を置いて再試行してください。${detail}`;
+ if(status===403){
+  if(action==='接続')return `接続時HTTP 403：このTokenでは非公開の chanwata/jazz-powerup-memory にアクセスできません。Fine-grained TokenのResource ownerがchanwata、Selected repositoriesにjazz-powerup-memoryが含まれるか確認。GitHub: ${detail||'Forbidden'}`;
+  if(action==='保存')return `保存時HTTP 403：TokenのRepository permissionsで Contents が Read and write になっているか確認してください。保存先は chanwata/jazz-powerup-memory の main です。GitHub: ${detail||'Forbidden'}`;
+  return `読込時HTTP 403：選択したリポジトリへのContents Read以上の権限を確認。GitHub: ${detail||'Forbidden'}`;
+ }
+ if(status===401)return 'HTTP 401：Tokenが無効・失効している可能性があります。新しいFine-grained Tokenを作り、こちらに貼らずアプリに入力してください。';
+ if(status===404&&action==='接続')return 'HTTP 404：Tokenから非公開リポジトリが見えていません。Repository accessの選択先とResource ownerを確認してください。';
+ if(status===409&&action==='保存')return 'HTTP 409：GitHubのブランチまたはファイルの更新競合です。mainブランチが存在することを確認し、同期し直してください。';
+ if(status===422&&action==='保存')return `HTTP 422：保存先のブランチ・ファイルまたはSHAが一致しません。GitHub: ${detail}`;
+ return `GitHub APIエラー（${action} / HTTP ${status}）。${detail||'Tokenと保存先リポジトリの設定を確認してください。'}`;
+}
 export function setGithubToken(value){token=String(value||'').trim();verified=false;}
 export function forgetGithubToken(){token='';verified=false;}
 export function hasGithubToken(){return token.length>0&&verified;}
@@ -15,11 +29,17 @@ export function decodeGitHubBase64(encoded){const binary=atob(String(encoded).re
 async function github(path,options={}){
  if(!token)throw Error('まずGitHubのFine-grained Tokenを接続してください。');
  const url=REPO_URL+(path?'/'+path:'');
+ const action=options.method==='PUT'?'保存':path?'読込':'接続';
  let response;
  try{response=await fetch(url,{...options,headers:{...jsonHeaders(),...(options.headers||{})},credentials:'omit',redirect:'error',cache:'no-store'});}
- catch(e){throw Error('GitHubと通信できません。通信制限やネットワーク設定を確認してください。');}
+ catch(e){throw Error('GitHubへの'+action+'通信に失敗。ネットワークまたはCORSの問題の可能性があります。ブラウザを再読み込みして再試行してください。');}
  if(response.status===404&&options.allow404)return null;
- if(!response.ok)throw Error('GitHub APIエラー（HTTP '+response.status+'）。対象リポジトリとTokenの権限を確認してください。');
+ if(!response.ok){
+   let message='';
+   try{const body=await response.json();message=typeof body?.message==='string'?body.message:'';}catch{}
+   const remaining=response.headers?.get?.('x-ratelimit-remaining')??null;
+   throw Error(explainGithubFailure(response.status,action,message,remaining));
+ }
  return response.json();
 }
 export async function verifyPrivateRepo(){
